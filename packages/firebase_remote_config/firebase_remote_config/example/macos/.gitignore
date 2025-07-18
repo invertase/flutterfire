@@ -3,6 +3,5 @@
 **/Pods/
 
 # Xcode-related
+**/dgph
 **/xcuserdata/
-Podfile
-Flutter.podspec

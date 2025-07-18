@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -6,8 +7,8 @@ import 'package:meta/meta.dart' show protected;
 
 /// The result of calling [getMetadata] on a storage object reference.
 class FullMetadata {
-  // ignore: public_member_api_docs
   @protected
+  // ignore: public_member_api_docs
   FullMetadata(this._metadata);
 
   final Map<String, dynamic> _metadata;

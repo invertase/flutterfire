@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -48,7 +49,7 @@ abstract class FirebaseFunctionsPlatform extends PlatformInterface {
 
   /// Sets the [FirebaseFunctionsPlatform.instance]
   static set instance(FirebaseFunctionsPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
@@ -64,5 +65,11 @@ abstract class FirebaseFunctionsPlatform extends PlatformInterface {
   HttpsCallablePlatform httpsCallable(
       String? origin, String name, HttpsCallableOptions options) {
     throw UnimplementedError('httpsCallable() is not implemented');
+  }
+
+  /// Creates a [HttpsCallablePlatform] instance from a [Uri]
+  HttpsCallablePlatform httpsCallableWithUri(
+      String? origin, Uri uri, HttpsCallableOptions options) {
+    throw UnimplementedError('httpsCallableWithUri() is not implemented');
   }
 }

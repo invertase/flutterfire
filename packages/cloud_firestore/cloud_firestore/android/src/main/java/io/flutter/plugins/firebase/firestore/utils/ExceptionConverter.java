@@ -1,8 +1,17 @@
+/*
+ * Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+ * for details. All rights reserved. Use of this source code is governed by a
+ * BSD-style license that can be found in the LICENSE file.
+ */
+
 package io.flutter.plugins.firebase.firestore.utils;
+
+import static io.flutter.plugins.firebase.firestore.FlutterFirebaseFirestorePlugin.DEFAULT_ERROR_CODE;
 
 import android.util.Log;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import io.flutter.plugins.firebase.firestore.FlutterFirebaseFirestoreException;
+import io.flutter.plugins.firebase.firestore.GeneratedAndroidFirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -43,5 +52,15 @@ public class ExceptionConverter {
     }
 
     return details;
+  }
+
+  public static void sendErrorToFlutter(
+      GeneratedAndroidFirebaseFirestore.Result result, Exception exception) {
+    Map<String, String> exceptionDetails = ExceptionConverter.createDetails(exception);
+    result.error(
+        new GeneratedAndroidFirebaseFirestore.FlutterError(
+            DEFAULT_ERROR_CODE,
+            exception != null ? exception.getMessage() : null,
+            exceptionDetails));
   }
 }

@@ -1,3 +1,557 @@
+## 12.4.9
+
+ - Update a dependency to the latest release.
+
+## 12.4.8
+
+ - **FIX**(core): bump Pigeon to v25.3.2 ([#17438](https://github.com/firebase/flutterfire/issues/17438)). ([4d24ef53](https://github.com/firebase/flutterfire/commit/4d24ef534464b39dcaef4151c83c78f87b36fb78))
+
+## 12.4.7
+
+ - Update a dependency to the latest release.
+
+## 12.4.6
+
+ - Update a dependency to the latest release.
+
+## 12.4.5
+
+ - Update a dependency to the latest release.
+
+## 12.4.4
+
+ - Update a dependency to the latest release.
+
+## 12.4.3
+
+ - Update a dependency to the latest release.
+
+## 12.4.2
+
+ - Update a dependency to the latest release.
+
+## 12.4.1
+
+ - **FIX**(storage,android): fix an issue that could crash the app when concurrent calls to removeEventListeners were happening ([#16996](https://github.com/firebase/flutterfire/issues/16996)). ([6499c5f5](https://github.com/firebase/flutterfire/commit/6499c5f5457bca168e6934679562548a94e4f7a8))
+
+## 12.4.0
+
+ - **FIX**(storage): update regex for cloudStoragePath ([#16847](https://github.com/firebase/flutterfire/issues/16847)). ([b0832175](https://github.com/firebase/flutterfire/commit/b08321754c1fc8b773c9ea61c2e09fe866cefacc))
+ - **FEAT**(storage): Swift Package Manager support ([#16782](https://github.com/firebase/flutterfire/issues/16782)). ([b5993aef](https://github.com/firebase/flutterfire/commit/b5993aef0bf12d056a366bea9c7ce51c9781e290))
+
+## 12.3.7
+
+ - **FIX**(storage,apple): clean up event channel, stream handler and task on completion ([#16708](https://github.com/firebase/flutterfire/issues/16708)). ([14b4a552](https://github.com/firebase/flutterfire/commit/14b4a552f90ea03b297938ee30423c0e1e7d888e))
+
+## 12.3.6
+
+ - Update a dependency to the latest release.
+
+## 12.3.5
+
+ - Update a dependency to the latest release.
+
+## 12.3.4
+
+ - **FIX**(storage,android): stream handler & event channel clean up on completion ([#13508](https://github.com/firebase/flutterfire/issues/13508)). ([f010b468](https://github.com/firebase/flutterfire/commit/f010b4684e38f47ad9b38d34c3a84a4eb4518fac))
+
+## 12.3.3
+
+ - **FIX**(storage,web): fix putData when using UInt8List ([#13466](https://github.com/firebase/flutterfire/issues/13466)). ([2bfb549e](https://github.com/firebase/flutterfire/commit/2bfb549ee6706648a0bf661781195171cfb05cb5))
+
+## 12.3.2
+
+ - **FIX**(all,apple): use modular headers to import ([#13400](https://github.com/firebase/flutterfire/issues/13400)). ([d7d2d4b9](https://github.com/firebase/flutterfire/commit/d7d2d4b93e7c00226027fffde46699f3d5388a41))
+
+## 12.3.1
+
+ - Update a dependency to the latest release.
+
+## 12.3.0
+
+ - **FEAT**(web): update to `web: ^1.0.0` ([#13200](https://github.com/firebase/flutterfire/issues/13200)). ([8fab04ae](https://github.com/firebase/flutterfire/commit/8fab04aec3b95789856d95639131bf09db29175b))
+
+## 12.2.0
+
+ - **FEAT**: bump iOS SDK to version 11.0.0 ([#13158](https://github.com/firebase/flutterfire/issues/13158)). ([c0e0c997](https://github.com/firebase/flutterfire/commit/c0e0c99703ea394d1bb873ac225c5fe3539b002d))
+ - **DOCS**: remove reference to flutter.io and firebase.flutter.dev ([#13152](https://github.com/firebase/flutterfire/issues/13152)). ([5f0874b9](https://github.com/firebase/flutterfire/commit/5f0874b91e28a203dd62d37d391e5760c91f5729))
+
+## 12.1.3
+
+ - **FIX**(storage,windows): add log to explain that the Storage Emulator is not available on Windows ([#13147](https://github.com/firebase/flutterfire/issues/13147)). ([8d1ea80c](https://github.com/firebase/flutterfire/commit/8d1ea80cf7b007459572405c876e813b43c3b4cf))
+
+## 12.1.2
+
+ - Update a dependency to the latest release.
+
+## 12.1.1
+
+ - Update a dependency to the latest release.
+
+## 12.1.0
+
+ - **FEAT**(storage,windows): add support for creationTime and updateTime ([#12966](https://github.com/firebase/flutterfire/issues/12966)). ([70a3fbc9](https://github.com/firebase/flutterfire/commit/70a3fbc97ec34c811616e92333aae299dd2ef569))
+
+## 12.0.1
+
+ - Update a dependency to the latest release.
+
+## 12.0.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **REFACTOR**: android plugins require `minSdk 21`, auth requires `minSdk 23` ahead of android BOM `>=33.0.0` ([#12873](https://github.com/firebase/flutterfire/issues/12873)). ([52accfc6](https://github.com/firebase/flutterfire/commit/52accfc6c39d6360d9c0f36efe369ede990b7362))
+ - **BREAKING** **REFACTOR**: bump all iOS deployment targets to iOS 13 ahead of Firebase iOS SDK `v11` breaking change ([#12872](https://github.com/firebase/flutterfire/issues/12872)). ([de0cea2c](https://github.com/firebase/flutterfire/commit/de0cea2c3c36694a76361be784255986fac84a43))
+ - **BREAKING** **REFACTOR**(storage): remove deprecated API ahead of breaking change ([#12863](https://github.com/firebase/flutterfire/issues/12863)). ([aaf01ac5](https://github.com/firebase/flutterfire/commit/aaf01ac5488e4d599f42f361f9a51f1297dce7c3))
+
+## 11.7.7
+
+ - **FIX**(storage): do not set metadata property unless it has a value ([#12805](https://github.com/firebase/flutterfire/issues/12805)). ([978a87db](https://github.com/firebase/flutterfire/commit/978a87db70218d63abbf0c6bf22e9d00633b5d83))
+
+## 11.7.6
+
+ - **FIX**(storage,windows): putFile(), putString(), putData() & Task streaming event fixes ([#12723](https://github.com/firebase/flutterfire/issues/12723)). ([de69e07a](https://github.com/firebase/flutterfire/commit/de69e07a36a9e2ce967d9f4470f4a14e987abf53))
+
+## 11.7.5
+
+ - Update a dependency to the latest release.
+
+## 11.7.4
+
+ - Update a dependency to the latest release.
+
+## 11.7.3
+
+ - **FIX**(storage): pass StorageMetadata as nullable for `putFile()` API. Metadata ought to be inferred from File. ([#12612](https://github.com/firebase/flutterfire/issues/12612)). ([e75d134f](https://github.com/firebase/flutterfire/commit/e75d134faef2cbf156d8936fa3f1c8c69cd59ec2))
+
+## 11.7.2
+
+ - Update a dependency to the latest release.
+
+## 11.7.1
+
+ - **FIX**(web): remove remaining references to `dart:html` ([#12601](https://github.com/firebase/flutterfire/issues/12601)). ([fbffedb6](https://github.com/firebase/flutterfire/commit/fbffedb65c180d29a07436af90b36ca56e97bfe7))
+
+## 11.7.0
+
+ - **FEAT**(android): Bump `compileSdk` version of Android plugins to latest stable (34) ([#12566](https://github.com/firebase/flutterfire/issues/12566)). ([e891fab2](https://github.com/firebase/flutterfire/commit/e891fab291e9beebc223000b133a6097e066a7fc))
+
+## 11.6.11
+
+ - Update a dependency to the latest release.
+
+## 11.6.10
+
+ - Update a dependency to the latest release.
+
+## 11.6.9
+
+ - Update a dependency to the latest release.
+
+## 11.6.8
+
+ - Update a dependency to the latest release.
+
+## 11.6.7
+
+ - **FIX**(storage): `Task.cancel()` method wasn't properly updating `task.snapshot` and `cancel()` wasn't working in certain conditions. ([#12322](https://github.com/firebase/flutterfire/issues/12322)). ([c3ca5d10](https://github.com/firebase/flutterfire/commit/c3ca5d101b735e2203ca3d4e52f0b457794b3a47))
+
+## 11.6.6
+
+ - Update a dependency to the latest release.
+
+## 11.6.5
+
+ - Update a dependency to the latest release.
+
+## 11.6.4
+
+ - Update a dependency to the latest release.
+
+## 11.6.3
+
+ - Update a dependency to the latest release.
+
+## 11.6.2
+
+ - Update a dependency to the latest release.
+
+## 11.6.1
+
+ - **FIX**(storage,windows): `getData()` crash has been fixed ([#12185](https://github.com/firebase/flutterfire/issues/12185)). ([ed8c7c51](https://github.com/firebase/flutterfire/commit/ed8c7c51d28398b1f68af404bdd855b75a1b1f56))
+ - **FIX**(storage): ensure Task listeners correctly propagate exceptions and close properly. ([#12160](https://github.com/firebase/flutterfire/issues/12160)). ([759684b1](https://github.com/firebase/flutterfire/commit/759684b1b445bf238e9644ef1dc495cdc6a55dd8))
+ - **FIX**(storage,android): fix `refFromUrl()` when using firebase storage emulator. Essentially, check `10.0.2.2` domain as well. ([#12047](https://github.com/firebase/flutterfire/issues/12047)). ([cef006a6](https://github.com/firebase/flutterfire/commit/cef006a69bafeae1d3481220e2a5fb7386bdfbe3))
+ - **DOCS**: change old documentation links of packages in README files ([#12136](https://github.com/firebase/flutterfire/issues/12136)). ([24b9ac7e](https://github.com/firebase/flutterfire/commit/24b9ac7ec29fc9ca466c0941c2cff26d75b8568d))
+
+## 11.6.0
+
+ - **FEAT**: allow users to disable automatic host mapping ([#11962](https://github.com/firebase/flutterfire/issues/11962)). ([13c1ce33](https://github.com/firebase/flutterfire/commit/13c1ce333b8cd113241a1f7ac07181c1c76194bc))
+
+## 11.5.6
+
+ - **FIX**(storage,windows): fix an issue where getData function would statically allocate memory ([#12020](https://github.com/firebase/flutterfire/issues/12020)). ([7d51dbdc](https://github.com/firebase/flutterfire/commit/7d51dbdc1795ff9708dc3e60e4fb7089e0af8d36))
+
+## 11.5.5
+
+ - Update a dependency to the latest release.
+
+## 11.5.4
+
+ - Update a dependency to the latest release.
+
+## 11.5.3
+
+ - Update a dependency to the latest release.
+
+## 11.5.2
+
+ - Update a dependency to the latest release.
+
+## 11.5.1
+
+ - **FIX**(storage,apple): set the storage emulator only once to stop it from crashing on hot restart ([#11862](https://github.com/firebase/flutterfire/issues/11862)). ([7f07d7aa](https://github.com/firebase/flutterfire/commit/7f07d7aaf3e4c978b7404660f736032b90bffd61))
+
+## 11.5.0
+
+ - **FIX**(storage): ensure bucket value is used to create FirebaseStorage instance to stop incorrect default bucket usage ([#11844](https://github.com/firebase/flutterfire/issues/11844)). ([49542f32](https://github.com/firebase/flutterfire/commit/49542f32ca8ae1eef6065e40ddb21fa40e66d7f0))
+ - **FEAT**(windows): add platform logging for core, auth, firestore and storage ([#11790](https://github.com/firebase/flutterfire/issues/11790)). ([e7d428d1](https://github.com/firebase/flutterfire/commit/e7d428d14be1535a2d579d4b2d376fbb81f06742))
+
+## 11.4.1
+
+ - Update a dependency to the latest release.
+
+## 11.4.0
+
+ - **FEAT**(storage,windows): Add windows support ([#11617](https://github.com/firebase/flutterfire/issues/11617)). ([87ea02c8](https://github.com/firebase/flutterfire/commit/87ea02c8ae03eb351636cf202961ad0df6caebd8))
+ - **FEAT**(storage): move Storage to use Pigeon for platform channels ([#11521](https://github.com/firebase/flutterfire/issues/11521)). ([edddc1de](https://github.com/firebase/flutterfire/commit/edddc1def508d0c516534b80c13d41a919fd39bc))
+
+## 11.3.1
+
+ - Update a dependency to the latest release.
+
+## 11.3.0
+
+ - **FEAT**: Full support of AGP 8 ([#11699](https://github.com/firebase/flutterfire/issues/11699)). ([bdb5b270](https://github.com/firebase/flutterfire/commit/bdb5b27084d225809883bdaa6aa5954650551927))
+
+## 11.2.8
+
+ - Update a dependency to the latest release.
+
+## 11.2.7
+
+ - Update a dependency to the latest release.
+
+## 11.2.6
+
+ - Update a dependency to the latest release.
+
+## 11.2.5
+
+ - Update a dependency to the latest release.
+
+## 11.2.4
+
+ - Update a dependency to the latest release.
+
+## 11.2.3
+
+ - Update a dependency to the latest release.
+
+## 11.2.2
+
+ - Update a dependency to the latest release.
+
+## 11.2.1
+
+ - Update a dependency to the latest release.
+
+## 11.2.0
+
+ - **FEAT**: update dependency constraints to `sdk: '>=2.18.0 <4.0.0'` `flutter: '>=3.3.0'` ([#10946](https://github.com/firebase/flutterfire/issues/10946)). ([2772d10f](https://github.com/firebase/flutterfire/commit/2772d10fe510dcc28ec2d37a26b266c935699fa6))
+
+## 11.1.2
+
+ - **FIX**: add support for AGP 8.0 ([#10901](https://github.com/firebase/flutterfire/issues/10901)). ([a3b96735](https://github.com/firebase/flutterfire/commit/a3b967354294c295a9be8d699a6adb7f4b1dba7f))
+
+## 11.1.1
+
+ - Update a dependency to the latest release.
+
+## 11.1.0
+
+ - **FEAT**: bump dart sdk constraint to 2.18 ([#10618](https://github.com/firebase/flutterfire/issues/10618)). ([f80948a2](https://github.com/firebase/flutterfire/commit/f80948a28b62eead358bdb900d5a0dfb97cebb33))
+
+## 11.0.16
+
+ - Update a dependency to the latest release.
+
+## 11.0.15
+
+ - Update a dependency to the latest release.
+
+## 11.0.14
+
+ - Update a dependency to the latest release.
+
+## 11.0.13
+
+ - Update a dependency to the latest release.
+
+## 11.0.12
+
+ - Update a dependency to the latest release.
+
+## 11.0.11
+
+ - **REFACTOR**: upgrade project to remove warnings from Flutter 3.7 ([#10344](https://github.com/firebase/flutterfire/issues/10344)). ([e0087c84](https://github.com/firebase/flutterfire/commit/e0087c845c7526c11a4241a26d39d4673b0ad29d))
+
+## 11.0.10
+
+ - Update a dependency to the latest release.
+
+## 11.0.9
+
+ - Update a dependency to the latest release.
+
+## 11.0.8
+
+ - **FIX**: fix usage of storage plugin with an isolate ([#10106](https://github.com/firebase/flutterfire/issues/10106)). ([86f24633](https://github.com/firebase/flutterfire/commit/86f2463364cbd3a0de88b1e6217120a95609b5b2))
+ - **FIX**: fix concurrency issue ([#10099](https://github.com/firebase/flutterfire/issues/10099)). ([d0b6fcf1](https://github.com/firebase/flutterfire/commit/d0b6fcf194afe987dec59d24b47ad197bf8e7cf8))
+
+## 11.0.7
+
+ - Update a dependency to the latest release.
+
+## 11.0.6
+
+ - Update a dependency to the latest release.
+
+## 11.0.5
+
+ - Update a dependency to the latest release.
+
+## 11.0.4
+
+ - Update a dependency to the latest release.
+
+## 11.0.3
+
+ - **REFACTOR**: add `verify` to `QueryPlatform` and change internal `verifyToken` API to `verify` ([#9711](https://github.com/firebase/flutterfire/issues/9711)). ([c99a842f](https://github.com/firebase/flutterfire/commit/c99a842f3e3f5f10246e73f51530cc58c42b49a3))
+
+## 11.0.2
+
+ - Update a dependency to the latest release.
+
+## 11.0.1
+
+ - Update a dependency to the latest release.
+
+## 11.0.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **FEAT**: Firebase iOS SDK version: `10.0.0` ([#9708](https://github.com/firebase/flutterfire/issues/9708)). ([9627c56a](https://github.com/firebase/flutterfire/commit/9627c56a37d657d0250b6f6b87d0fec1c31d4ba3))
+
+## 10.3.11
+
+ - Update a dependency to the latest release.
+
+## 10.3.10
+
+ - Update a dependency to the latest release.
+
+## 10.3.9
+
+ - Update a dependency to the latest release.
+
+## 10.3.8
+
+ - Update a dependency to the latest release.
+
+## 10.3.7
+
+ - Update a dependency to the latest release.
+
+## 10.3.6
+
+ - Update a dependency to the latest release.
+
+## 10.3.5
+
+ - Update a dependency to the latest release.
+
+## 10.3.4
+
+ - Update a dependency to the latest release.
+
+## 10.3.3
+
+ - Update a dependency to the latest release.
+
+## 10.3.2
+
+ - Update a dependency to the latest release.
+
+## 10.3.1
+
+ - **FIX**: bump `firebase_core_platform_interface` version to fix previous release. ([bea70ea5](https://github.com/firebase/flutterfire/commit/bea70ea5cbbb62cbfd2a7a74ae3a07cb12b3ee5a))
+
+## 10.3.0
+
+ - **FEAT**: Bump Firebase iOS SDK to `9.2.0` (#8594). ([79610162](https://github.com/firebase/flutterfire/commit/79610162460b8877f3bc727464a7065106f08079))
+
+## 10.2.18
+
+ - **REFACTOR**: migrate from hash* to Object.hash* (#8797). ([3dfc0997](https://github.com/firebase/flutterfire/commit/3dfc0997050ee4351207c355b2c22b46885f971f))
+ - **REFACTOR**: use "firebase" instead of "FirebaseExtended" as organisation in all links for this repository (#8791). ([d90b8357](https://github.com/firebase/flutterfire/commit/d90b8357db01d65e753021358668f0b129713e6b))
+ - **DOCS**: point to "firebase.google" domain for hyperlinks in the usage section of `README.md` files (#8814). ([78006e0d](https://github.com/firebase/flutterfire/commit/78006e0d5b9dce8038ce3606a43ddcbc8a4a71b9))
+
+## 10.2.17
+
+ - **DOCS**: use camel case style for "FlutterFire" in `README.md` (#8752). ([5c5dcaf1](https://github.com/firebase/flutterfire/commit/5c5dcaf1909dacf293fec5e79461d43468a13279))
+
+## 10.2.16
+
+ - Update a dependency to the latest release.
+
+## 10.2.15
+
+ - Update a dependency to the latest release.
+
+## 10.2.14
+
+ - **REFACTOR**: Remove deprecated `Tasks.call()` API from android. (#8421). ([461bba5a](https://github.com/firebase/flutterfire/commit/461bba5a510b341b3b9bd414c9412944714e9305))
+
+## 10.2.13
+
+ - Update a dependency to the latest release.
+
+## 10.2.12
+
+ - Update a dependency to the latest release.
+
+## 10.2.11
+
+ - **FIX**: Fix `UploadTask.cancel()` so that it completes when called. (#8417). ([19ee62c3](https://github.com/firebase/flutterfire/commit/19ee62c33f34278dac082c11bf7574785e60abb5))
+
+## 10.2.10
+
+ - Update a dependency to the latest release.
+
+## 10.2.9
+
+ - **FIX**: update all Dart SDK version constraints to Dart >= 2.16.0 (#8184). ([df4a5bab](https://github.com/firebase/flutterfire/commit/df4a5bab3c029399b4f257a5dd658d302efe3908))
+
+## 10.2.8
+
+ - Update a dependency to the latest release.
+
+## 10.2.7
+
+- Update a dependency to the latest release.
+
+## 10.2.6
+
+ - Update a dependency to the latest release.
+
+## 10.2.5
+
+ - **FIX**: bump Android `compileSdkVersion` to 31 (#7726). ([a9562bac](https://github.com/firebase/flutterfire/commit/a9562bac60ba927fb3664a47a7f7eaceb277dca6))
+
+## 10.2.4
+
+ - **REFACTOR**: fix all `unnecessary_import` analyzer issues introduced with Flutter 2.8. ([7f0e82c9](https://github.com/firebase/flutterfire/commit/7f0e82c978a3f5a707dd95c7e9136a3e106ff75e))
+
+## 10.2.3
+
+ - Update a dependency to the latest release.
+
+## 10.2.2
+
+ - Update a dependency to the latest release.
+
+## 10.2.1
+
+ - Update a dependency to the latest release.
+
+## 10.2.0
+
+ - **REFACTOR**: migrate remaining examples & e2e tests to null-safety (#7393).
+ - **FEAT**: automatically inject Firebase JS SDKs (#7359).
+
+## 10.1.0
+
+ - **FEAT**: support initializing default `FirebaseApp` instances from Dart (#6549).
+
+## 10.0.7
+
+ - Update a dependency to the latest release.
+
+## 10.0.6
+
+ - **REFACTOR**: remove deprecated Flutter Android v1 Embedding usages, including in example app (#7158).
+ - **STYLE**: macOS & iOS; explicitly include header that defines `TARGET_OS_OSX` (#7116).
+
+## 10.0.5
+
+ - **FIX**: remove https port number from `downloadUrl` for `iOS` (#7097).
+
+## 10.0.4
+
+ - **FIX**: fix localhost url parsing for Storage Emulator (#7003).
+ - **CHORE**: update gradle version across packages (#7054).
+
+## 10.0.3
+
+ - **FIX**: accept google storage bucket urls (#6848).
+
+## 10.0.2
+
+ - Update a dependency to the latest release.
+
+## 10.0.1
+
+ - **FIX**: reinstate deprecated emulator apis (#6626).
+
+## 10.0.0
+
+> Note: This release has breaking changes.
+
+ - **FIX**: Use `mappedHost` instead of `host` (#6539).
+ - **CHORE**: update v2 embedding support (#6506).
+ - **CHORE**: rm deprecated jcenter repository (#6431).
+ - **BREAKING** **FEAT**: use<product>Emulator(host, port) API update.
+ - **BREAKING** **FEAT**: use<product>Emulator(host, port) API update (#6439).
+
+## 9.0.0
+
+> Note: This release has breaking changes.
+
+ - **CHORE**: rm deprecated jcenter repository (#6431).
+ - **BREAKING** **FEAT**: useStorageEmulator(host, port) API update.
+
+## 8.1.3
+
+ - Update a dependency to the latest release.
+
+## 8.1.2
+
+ - **FIX**: refFromUrl parse url (#6353).
+
+## 8.1.1
+
+ - **DOCS**: Add Flutter Favorite badge (#6190).
+
+## 8.1.0
+
+ - **FEAT**: add support for the Firebase Storage emulator via `useEmulator` (#5936).
+ - **FEAT**: upgrade Firebase JS SDK version to 8.6.1.
+ - **FIX**: podspec osx version checking script should use a version range instead of a single fixed version.
+
+## 8.0.6
+
+ - Update a dependency to the latest release.
+
 ## 8.0.5
 
  - **FIX**: secondary storage buckets now work as expected on Web (#5863).
@@ -92,7 +646,7 @@
 
 ## 5.0.0-dev.1
 
-As part of our on-going work for [#2582](https://github.com/FirebaseExtended/flutterfire/issues/2582) this is our Firebase Storage rework changes.
+As part of our on-going work for [#2582](https://github.com/firebase/flutterfire/issues/2582) this is our Firebase Storage rework changes.
 
 Overall, Firebase Storage has been heavily reworked to bring it inline with the federated plugin setup along with adding new features,
 documentation and many more unit and end-to-end tests (tested on Android, iOS & MacOS).

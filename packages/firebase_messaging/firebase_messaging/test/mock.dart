@@ -1,9 +1,10 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,32 +27,7 @@ Future<T> neverEndingFuture<T>() async {
 void setupFirebaseMessagingMocks() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelFirebase.channel.setMockMethodCallHandler((call) async {
-    if (call.method == 'Firebase#initializeCore') {
-      return [
-        {
-          'name': defaultFirebaseAppName,
-          'options': {
-            'apiKey': '123',
-            'appId': '123',
-            'messagingSenderId': '123',
-            'projectId': '123',
-          },
-          'pluginConstants': {},
-        }
-      ];
-    }
-
-    if (call.method == 'Firebase#initializeApp') {
-      return {
-        'name': call.arguments['appName'],
-        'options': call.arguments['options'],
-        'pluginConstants': {},
-      };
-    }
-
-    return null;
-  });
+  setupFirebaseCoreMocks();
 
   // Mock Platform Interface Methods
   // ignore: invalid_use_of_protected_member
@@ -106,9 +82,8 @@ class MockFirebaseMessaging extends Mock
   }
 
   @override
-  Future<void> deleteToken({String? senderId}) {
-    return super.noSuchMethod(
-        Invocation.method(#deleteToken, [], {#senderId: senderId}),
+  Future<void> deleteToken() {
+    return super.noSuchMethod(Invocation.method(#deleteToken, []),
         returnValue: Future<void>.value(),
         returnValueForMissingStub: Future<void>.value());
   }
@@ -121,10 +96,9 @@ class MockFirebaseMessaging extends Mock
   }
 
   @override
-  Future<String> getToken({String? senderId, String? vapidKey}) {
+  Future<String> getToken({String? vapidKey}) {
     return super.noSuchMethod(
-        Invocation.method(
-            #getToken, [], {#senderId: senderId, #vapidKey: vapidKey}),
+        Invocation.method(#getToken, [], {#vapidKey: vapidKey}),
         returnValue: Future<String>.value(''),
         returnValueForMissingStub: Future<String>.value(''));
   }
@@ -146,14 +120,16 @@ class MockFirebaseMessaging extends Mock
   }
 
   @override
-  Future<NotificationSettings> requestPermission(
-      {bool? alert = true,
-      bool? announcement = false,
-      bool? badge = true,
-      bool? carPlay = false,
-      bool? criticalAlert = false,
-      bool? provisional = false,
-      bool? sound = true}) {
+  Future<NotificationSettings> requestPermission({
+    bool? alert = true,
+    bool? announcement = false,
+    bool? badge = true,
+    bool? carPlay = false,
+    bool? criticalAlert = false,
+    bool? provisional = false,
+    bool? sound = true,
+    bool? providesAppNotificationSettings = false,
+  }) {
     return super.noSuchMethod(
         Invocation.method(#requestPermission, [], {
           #alert: alert,
@@ -162,7 +138,8 @@ class MockFirebaseMessaging extends Mock
           #carPlay: carPlay,
           #criticalAlert: criticalAlert,
           #provisional: provisional,
-          #sound: sound
+          #sound: sound,
+          #providesAppNotificationSettings: providesAppNotificationSettings,
         }),
         returnValue: neverEndingFuture<NotificationSettings>(),
         returnValueForMissingStub: neverEndingFuture<NotificationSettings>());

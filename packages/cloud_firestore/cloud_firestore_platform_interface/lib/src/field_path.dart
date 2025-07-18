@@ -5,7 +5,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'internal/field_path_type.dart';
+import 'field_path_type.dart';
 
 String _reserved = "Paths must not contain '~', '*', '/', '[', or ']'.";
 
@@ -21,8 +21,10 @@ class FieldPath {
   /// Creates a new [FieldPath].
   FieldPath(this.components)
       : assert(components.isNotEmpty),
-        assert(components.where((component) => component.isEmpty).isEmpty,
-            'Expected all FieldPath components to be non-null or non-empty strings.');
+        assert(
+          components.where((component) => component.isEmpty).isEmpty,
+          'Expected all FieldPath components to be non-null or non-empty strings.',
+        );
 
   /// Returns a special sentinel `FieldPath` to refer to the ID of a document.
   ///
@@ -55,7 +57,7 @@ class FieldPath {
       const ListEquality().equals(other.components, components);
 
   @override
-  int get hashCode => hashList(components);
+  int get hashCode => Object.hashAll(components);
 
   @override
   String toString() => 'FieldPath($components)';

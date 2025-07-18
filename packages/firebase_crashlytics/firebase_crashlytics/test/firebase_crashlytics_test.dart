@@ -1,14 +1,15 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_crashlytics/src/utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import './mock.dart';
 
 void main() {
@@ -75,7 +76,10 @@ void main() {
             'exception': exception,
             'reason': exceptionReason,
             'information': '',
-            'stackTraceElements': getStackTraceElements(stack)
+            'fatal': false,
+            'stackTraceElements': getStackTraceElements(stack),
+            'buildId': '',
+            'loadingUnits': [],
           })
         ]);
         // Confirm that the stack trace contains current stack.
@@ -122,15 +126,28 @@ void main() {
         ],
         context: ErrorDescription(exceptionReason),
       );
-      await crashlytics!.recordFlutterError(details);
-      expect(methodCallLog, <Matcher>[
-        isMethodCall('Crashlytics#recordError', arguments: {
-          'exception': exception,
-          'reason': exceptionReason,
-          'information': '$exceptionFirstMessage\n$exceptionSecondMessage',
-          'stackTraceElements': getStackTraceElements(stack)
-        })
-      ]);
+      final oldPresentError = FlutterError.presentError;
+      var presentedError = false;
+      FlutterError.presentError = (details) {
+        presentedError = true;
+      };
+      try {
+        await crashlytics!.recordFlutterError(details);
+        expect(presentedError, true);
+        expect(methodCallLog, <Matcher>[
+          isMethodCall('Crashlytics#recordError', arguments: {
+            'exception': exception,
+            'reason': exceptionReason,
+            'fatal': false,
+            'information': '$exceptionFirstMessage\n$exceptionSecondMessage',
+            'stackTraceElements': getStackTraceElements(stack),
+            'buildId': '',
+            'loadingUnits': [],
+          })
+        ]);
+      } finally {
+        FlutterError.presentError = oldPresentError;
+      }
     });
 
     group('log', () {
@@ -251,7 +268,7 @@ void main() {
         expect(elements.length, 1);
         expect(elements.first, <String, String>{
           'method':
-              '    #00 abs 0 virt 00000000001af27b _kDartIsolateSnapshotInstructions+0x1a127b',
+              '    #00 abs 000075f17833027b virt 00000000001af27b _kDartIsolateSnapshotInstructions+0x1a127b',
           'file': '',
           'line': '0',
         });
@@ -271,7 +288,8 @@ void main() {
         final List<Map<String, String>> elements = getStackTraceElements(trace);
         expect(elements.length, 1);
         expect(elements.first, <String, String>{
-          'method': '    #00 abs 0 _kDartIsolateSnapshotInstructions+0x1a127b',
+          'method':
+              '    #00 abs 000075f17833027b _kDartIsolateSnapshotInstructions+0x1a127b',
           'file': '',
           'line': '0',
         });

@@ -20,7 +20,7 @@ import org.json.JSONObject;
 public class FlutterFirebaseMessagingStore {
   private static final String PREFERENCES_FILE = "io.flutter.plugins.firebase.messaging";
   private static final String KEY_NOTIFICATION_IDS = "notification_ids";
-  private static final int MAX_SIZE_NOTIFICATIONS = 20;
+  private static final int MAX_SIZE_NOTIFICATIONS = 100;
   private static FlutterFirebaseMessagingStore instance;
   private final String DELIMITER = ",";
   private SharedPreferences preferences;
@@ -72,7 +72,7 @@ public class FlutterFirebaseMessagingStore {
     setPreferencesStringValue(KEY_NOTIFICATION_IDS, notifications);
   }
 
-  public RemoteMessage getFirebaseMessage(String remoteMessageId) {
+  public Map<String, Object> getFirebaseMessageMap(String remoteMessageId) {
     String remoteMessageString = getPreferencesStringValue(remoteMessageId, null);
     if (remoteMessageString != null) {
       try {
@@ -81,7 +81,7 @@ public class FlutterFirebaseMessagingStore {
         // Add a fake 'to' - as it's required to construct a RemoteMessage instance.
         messageOutMap.put("to", remoteMessageId);
         argumentsMap.put("message", messageOutMap);
-        return FlutterFirebaseMessagingUtils.getRemoteMessageForArguments(argumentsMap);
+        return argumentsMap;
       } catch (JSONException e) {
         e.printStackTrace();
       }

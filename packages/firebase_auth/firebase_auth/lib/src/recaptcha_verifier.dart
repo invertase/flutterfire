@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_auth;
+part of '../firebase_auth.dart';
 
 /// An [reCAPTCHA](https://www.google.com/recaptcha/?authuser=0)-based
 /// application verifier.
@@ -34,7 +35,7 @@ class RecaptchaVerifier {
   ///    when a [container] is not provided. Defaults to [RecaptchaVerifierSize.normal].
   ///
   /// [theme] When providing a custom [container], a theme (light or dark) can
-  ///   be provided to change the apperance of the reCAPTCHA widget. This has no
+  ///   be provided to change the appearance of the reCAPTCHA widget. This has no
   ///   effect when a [container] is not provided. Defaults to [RecaptchaVerifierTheme.light].
   ///
   /// [onSuccess] An optional callback which is called when the user successfully
@@ -45,6 +46,7 @@ class RecaptchaVerifier {
   ///
   /// [onExpired] An optional callback which is called when the reCAPTCHA expires.
   factory RecaptchaVerifier({
+    required FirebaseAuthPlatform auth,
     String? container,
     RecaptchaVerifierSize size = RecaptchaVerifierSize.normal,
     RecaptchaVerifierTheme theme = RecaptchaVerifierTheme.light,
@@ -54,6 +56,7 @@ class RecaptchaVerifier {
   }) {
     return RecaptchaVerifier._(
       _factory.delegateFor(
+        auth: auth,
         container: container,
         size: size,
         theme: theme,

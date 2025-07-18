@@ -1,21 +1,20 @@
 group 'io.flutter.plugins.firebase.storage'
 version '1.0-SNAPSHOT'
 
+apply plugin: 'com.android.library'
+apply from: file("local-config.gradle")
+
 buildscript {
     repositories {
         google()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.4'
+        mavenCentral()
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 
@@ -26,8 +25,6 @@ allprojects {
         }
     }
 }
-
-apply plugin: 'com.android.library'
 
 def firebaseCoreProject = findProject(':firebase_core')
 if (firebaseCoreProject == null) {
@@ -43,23 +40,36 @@ def getRootProjectExtOrCoreProperty(name, firebaseCoreProject) {
 }
 
 android {
-    compileSdkVersion 29
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    // Conditional for compatibility with AGP <4.2.
+    if (project.android.hasProperty("namespace")) {
+        namespace 'io.flutter.plugins.firebase.storage'
     }
+
+    compileSdkVersion project.ext.compileSdk
+
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion project.ext.minSdk
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    compileOptions {
+        sourceCompatibility project.ext.javaVersion
+        targetCompatibility project.ext.javaVersion
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     lintOptions {
         disable 'InvalidPackage'
     }
+
     dependencies {
         api firebaseCoreProject
         implementation platform("com.google.firebase:firebase-bom:${getRootProjectExtOrCoreProperty("FirebaseSDKVersion", firebaseCoreProject)}")
         implementation 'com.google.firebase:firebase-storage'
-        implementation 'androidx.annotation:annotation:1.1.0'
+        implementation 'androidx.annotation:annotation:1.7.0'
     }
 }
 

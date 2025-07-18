@@ -6,16 +6,20 @@ include: all_lint_rules.yaml
 analyzer:
   # TODO(rrousselGit): disable implicit-cast/implicit-dynamic
   errors:
-    import_of_legacy_library_into_null_safe: ignore
     # Otherwise cause the import of all_lint_rules to warn because of some rules conflicts.
     # We explicitly enabled even conflicting rules and are fixing the conflict
     # in this file
     included_file_warning: ignore
+  exclude:
+    - packages/**/example/lib/generated_plugin_registrant.dart
 
 linter:
   rules:
-    ## Disabled rules because the repository doesn't respect them (yet)
+    ## currently enabled only for firebase_core
+    avoid_dynamic_calls: false
 
+    ## Disabled rules because the repository doesn't respect them (yet)
+    use_build_context_synchronously: false
     directives_ordering: false
     prefer_final_fields: false
     comment_references: false
@@ -38,7 +42,12 @@ linter:
     prefer_mixin: false
     public_member_api_docs: false
 
+    invalid_runtime_check_with_js_interop_types: true
+
     #############
+
+    # Far too verbose, and not that big of a deal when using parameter_assignments
+    prefer_final_parameters: false
 
     # Personal preference. I don't find it more readable
     cascade_invocations: false
@@ -54,7 +63,7 @@ linter:
     always_specify_types: false
 
     # Incompatible with `prefer_final_locals`
-    # Having immutable local variables makes larger functions more predictible
+    # Having immutable local variables makes larger functions more predictable
     # so we will use `prefer_final_locals` instead.
     unnecessary_final: false
 
@@ -65,10 +74,6 @@ linter:
     # Conflicts with the convention used by flutter, which puts `Key key`
     # and `@required Widget child` last.
     always_put_required_named_parameters_first: false
-
-    # `as` is not that bad (especially with the upcoming non-nullable types).
-    # Explicit exceptions is better than implicit exceptions.
-    avoid_as: false
 
     # This project doesn't use Flutter-style todos
     flutter_style_todos: false

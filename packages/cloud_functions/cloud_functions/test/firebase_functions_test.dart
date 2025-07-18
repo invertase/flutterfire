@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -99,16 +100,14 @@ void main() {
         expect(FirebaseFunctions.instance.httpsCallable('test').delegate.origin,
             isNull);
         // Set the origin for the default FirebaseFunctions instance.
-        FirebaseFunctions.instance
-            .useFunctionsEmulator(origin: 'http://0.0.0.0:5000');
+        FirebaseFunctions.instance.useFunctionsEmulator('0.0.0.0', 5000);
         expect(FirebaseFunctions.instance.httpsCallable('test').delegate.origin,
             equals('http://0.0.0.0:5000'));
       });
 
       test('"origin" is only set for the specific FirebaseFunctions instance',
           () {
-        FirebaseFunctions.instance
-            .useFunctionsEmulator(origin: 'http://0.0.0.0:5000');
+        FirebaseFunctions.instance.useFunctionsEmulator('0.0.0.0', 5000);
         // Origin on the default FirebaseFunctions instance should be set.
         expect(FirebaseFunctions.instance.httpsCallable('test').delegate.origin,
             equals('http://0.0.0.0:5000'));
@@ -121,16 +120,10 @@ void main() {
             isNull);
       });
 
-      test('throws if "origin" is an empty string', () {
-        expect(() {
-          FirebaseFunctions.instance.useFunctionsEmulator(origin: '');
-        }, throwsA(isA<AssertionError>()));
-      });
-
       test('handles "localhost" and "127.0.0.1" origin only for Android', () {
         const testLocalhostOrigins = [
-          'http://127.0.0.1:5000',
-          'http://localhost:5000',
+          '127.0.0.1',
+          'localhost',
         ];
 
         for (final platform in TargetPlatform.values) {
@@ -139,9 +132,9 @@ void main() {
           for (final testOrigin in testLocalhostOrigins) {
             final expectedOrigin = platform == TargetPlatform.android
                 ? 'http://10.0.2.2:5000'
-                : testOrigin;
+                : 'http://$testOrigin:5000';
 
-            FirebaseFunctions.instance.useFunctionsEmulator(origin: testOrigin);
+            FirebaseFunctions.instance.useFunctionsEmulator(testOrigin, 5000);
             // Origin on the default FirebaseFunctions instance should be set.
             expect(
                 FirebaseFunctions.instance

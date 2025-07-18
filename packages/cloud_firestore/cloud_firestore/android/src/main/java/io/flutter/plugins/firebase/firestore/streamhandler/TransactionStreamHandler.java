@@ -1,6 +1,13 @@
+/*
+ * Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+ * for details. All rights reserved. Use of this source code is governed by a
+ * BSD-style license that can be found in the LICENSE file.
+ */
+
 package io.flutter.plugins.firebase.firestore.streamhandler;
 
-import android.app.Activity;
+import android.os.Handler;
+import android.os.Looper;
 import androidx.annotation.Nullable;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldPath;
@@ -9,17 +16,19 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.FirebaseFirestoreException.Code;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.Transaction;
+import com.google.firebase.firestore.TransactionOptions;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
 import io.flutter.plugins.firebase.firestore.FlutterFirebaseFirestoreTransactionResult;
+import io.flutter.plugins.firebase.firestore.GeneratedAndroidFirebaseFirestore;
 import io.flutter.plugins.firebase.firestore.utils.ExceptionConverter;
+import io.flutter.plugins.firebase.firestore.utils.PigeonParser;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class TransactionStreamHandler implements OnTransactionResultListener, StreamHandler {
 
@@ -28,47 +37,44 @@ public class TransactionStreamHandler implements OnTransactionResultListener, St
     void onStarted(Transaction transaction);
   }
 
-  final AtomicReference<Activity> activityRef;
   final OnTransactionStartedListener onTransactionStartedListener;
+  final FirebaseFirestore firestore;
+  final String transactionId;
+  final Long timeout;
+
+  final Long maxAttempts;
 
   public TransactionStreamHandler(
-      AtomicReference<Activity> activityRef,
-      OnTransactionStartedListener onTransactionStartedListener) {
-    this.activityRef = activityRef;
+      OnTransactionStartedListener onTransactionStartedListener,
+      FirebaseFirestore firestore,
+      String transactionId,
+      Long timeout,
+      Long maxAttempts) {
     this.onTransactionStartedListener = onTransactionStartedListener;
+    this.firestore = firestore;
+    this.transactionId = transactionId;
+    this.timeout = timeout;
+    this.maxAttempts = maxAttempts;
   }
 
   final Semaphore semaphore = new Semaphore(0);
-  final Map<String, Object> response = new HashMap<>();
+  private GeneratedAndroidFirebaseFirestore.PigeonTransactionResult resultType;
+  private List<GeneratedAndroidFirebaseFirestore.PigeonTransactionCommand> commands;
+
+  final Handler mainLooper = new Handler(Looper.getMainLooper());
 
   @Override
   public void onListen(Object arguments, EventSink events) {
-    @SuppressWarnings("unchecked")
-    Map<String, Object> argumentsMap = (Map<String, Object>) arguments;
-
-    FirebaseFirestore firestore =
-        (FirebaseFirestore) Objects.requireNonNull(argumentsMap.get("firestore"));
-
-    Object value = argumentsMap.get("timeout");
-    Long timeout;
-
-    if (value instanceof Long) {
-      timeout = (Long) value;
-    } else if (value instanceof Integer) {
-      timeout = Long.valueOf((Integer) value);
-    } else {
-      timeout = 5000L;
-    }
-
     firestore
         .runTransaction(
+            new TransactionOptions.Builder().setMaxAttempts(maxAttempts.intValue()).build(),
             transaction -> {
               onTransactionStartedListener.onStarted(transaction);
 
               Map<String, Object> attemptMap = new HashMap<>();
               attemptMap.put("appName", firestore.getApp().getName());
 
-              activityRef.get().runOnUiThread(() -> events.success(attemptMap));
+              mainLooper.post(() -> events.success(attemptMap));
 
               try {
                 if (!semaphore.tryAcquire(timeout, TimeUnit.MILLISECONDS)) {
@@ -80,54 +86,47 @@ public class TransactionStreamHandler implements OnTransactionResultListener, St
                     new FirebaseFirestoreException("interrupted", Code.DEADLINE_EXCEEDED));
               }
 
-              if (response.isEmpty()) {
-                return FlutterFirebaseFirestoreTransactionResult.complete();
-              }
-              final String resultType = (String) response.get("type");
-
-              if ("ERROR".equalsIgnoreCase(resultType)) {
+              if (commands.isEmpty()) {
                 return FlutterFirebaseFirestoreTransactionResult.complete();
               }
 
-              List<Map<String, Object>> commands =
-                  (List<Map<String, Object>>) response.get("commands");
+              if (resultType == GeneratedAndroidFirebaseFirestore.PigeonTransactionResult.FAILURE) {
+                return FlutterFirebaseFirestoreTransactionResult.complete();
+              }
 
-              for (Map<String, Object> command : commands) {
-                String type = (String) Objects.requireNonNull(command.get("type"));
-                String path = (String) Objects.requireNonNull(command.get("path"));
-                DocumentReference documentReference = firestore.document(path);
+              for (GeneratedAndroidFirebaseFirestore.PigeonTransactionCommand command : commands) {
+                DocumentReference documentReference = firestore.document(command.getPath());
 
-                @SuppressWarnings("unchecked")
-                Map<String, Object> data = (Map<String, Object>) command.get("data");
-
-                switch (type) {
-                  case "DELETE":
+                switch (command.getType()) {
+                  case DELETE_TYPE:
                     transaction.delete(documentReference);
                     break;
-                  case "UPDATE":
-                    transaction.update(documentReference, Objects.requireNonNull(data));
+                  case UPDATE:
+                    transaction.update(
+                        documentReference, Objects.requireNonNull(command.getData()));
                     break;
-                  case "SET":
+                  case SET:
                     {
-                      @SuppressWarnings("unchecked")
-                      Map<String, Object> options =
-                          (Map<String, Object>) Objects.requireNonNull(command.get("options"));
+                      GeneratedAndroidFirebaseFirestore.PigeonDocumentOption options =
+                          Objects.requireNonNull(command.getOption());
                       SetOptions setOptions = null;
 
-                      if (options.get("merge") != null && (boolean) options.get("merge")) {
+                      if (options.getMerge() != null && options.getMerge()) {
                         setOptions = SetOptions.merge();
-                      } else if (options.get("mergeFields") != null) {
-                        @SuppressWarnings("unchecked")
-                        List<FieldPath> fieldPathList =
-                            (List<FieldPath>) Objects.requireNonNull(options.get("mergeFields"));
+                      } else if (options.getMergeFields() != null) {
+                        List<List<String>> fieldList =
+                            Objects.requireNonNull(options.getMergeFields());
+                        List<FieldPath> fieldPathList = PigeonParser.parseFieldPath(fieldList);
+
                         setOptions = SetOptions.mergeFieldPaths(fieldPathList);
                       }
 
+                      Map<String, Object> data = Objects.requireNonNull(command.getData());
+
                       if (setOptions == null) {
-                        transaction.set(documentReference, Objects.requireNonNull(data));
+                        transaction.set(documentReference, data);
                       } else {
-                        transaction.set(
-                            documentReference, Objects.requireNonNull(data), setOptions);
+                        transaction.set(documentReference, data, setOptions);
                       }
 
                       break;
@@ -148,8 +147,11 @@ public class TransactionStreamHandler implements OnTransactionResultListener, St
                 map.put("complete", true);
               }
 
-              activityRef.get().runOnUiThread(() -> events.success(map));
-              activityRef.get().runOnUiThread(events::endOfStream);
+              mainLooper.post(
+                  () -> {
+                    events.success(map);
+                    events.endOfStream();
+                  });
             });
   }
 
@@ -159,8 +161,11 @@ public class TransactionStreamHandler implements OnTransactionResultListener, St
   }
 
   @Override
-  public void receiveTransactionResponse(Map<String, Object> result) {
-    response.putAll(result);
+  public void receiveTransactionResponse(
+      GeneratedAndroidFirebaseFirestore.PigeonTransactionResult resultType,
+      List<GeneratedAndroidFirebaseFirestore.PigeonTransactionCommand> commands) {
+    this.resultType = resultType;
+    this.commands = commands;
     semaphore.release();
   }
 }

@@ -1,14 +1,13 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:firebase_storage_platform_interface/firebase_storage_platform_interface.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -38,36 +37,52 @@ const String testPageToken = 'test-page-token';
 
 final MockFirebaseStorage kMockStoragePlatform = MockFirebaseStorage();
 
+class MockFirebaseAppStorage implements TestFirebaseCoreHostApi {
+  @override
+  Future<CoreInitializeResponse> initializeApp(
+    String appName,
+    CoreFirebaseOptions initializeAppRequest,
+  ) async {
+    return CoreInitializeResponse(
+      name: appName,
+      options: initializeAppRequest,
+      pluginConstants: {},
+    );
+  }
+
+  @override
+  Future<List<CoreInitializeResponse>> initializeCore() async {
+    return [
+      CoreInitializeResponse(
+        name: defaultFirebaseAppName,
+        options: CoreFirebaseOptions(
+          apiKey: '123',
+          projectId: '123',
+          appId: '123',
+          messagingSenderId: '123',
+          storageBucket: kBucket,
+        ),
+        pluginConstants: {},
+      )
+    ];
+  }
+
+  @override
+  Future<CoreFirebaseOptions> optionsFromResource() async {
+    return CoreFirebaseOptions(
+      apiKey: '123',
+      projectId: '123',
+      appId: '123',
+      messagingSenderId: '123',
+      storageBucket: kBucket,
+    );
+  }
+}
+
 void setupFirebaseStorageMocks() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelFirebase.channel.setMockMethodCallHandler((call) async {
-    if (call.method == 'Firebase#initializeCore') {
-      return [
-        {
-          'name': defaultFirebaseAppName,
-          'options': {
-            'apiKey': '123',
-            'appId': '123',
-            'messagingSenderId': '123',
-            'projectId': '123',
-            'storageBucket': kBucket
-          },
-          'pluginConstants': {},
-        }
-      ];
-    }
-
-    if (call.method == 'Firebase#initializeApp') {
-      return {
-        'name': call.arguments['appName'],
-        'options': call.arguments['options'],
-        'pluginConstants': {},
-      };
-    }
-
-    return null;
-  });
+  TestFirebaseCoreHostApi.setUp(MockFirebaseAppStorage());
 
   // Mock Platform Interface Methods
   when(kMockStoragePlatform.delegateFor(
@@ -87,6 +102,7 @@ class MockFirebaseStorage extends Mock
   MockFirebaseStorage() {
     TestFirebaseStoragePlatform();
   }
+
   @override
   final int maxOperationRetryTime = 0;
   @override
@@ -107,10 +123,17 @@ class MockFirebaseStorage extends Mock
         returnValue: TestReferencePlatform(),
         returnValueForMissingStub: TestReferencePlatform());
   }
+
+  @override
+  Future<void> useStorageEmulator(String host, int port) async {
+    return super
+        .noSuchMethod(Invocation.method(#useStorageEmulator, [host, port]));
+  }
 }
 
 class TestFirebaseStoragePlatform extends FirebaseStoragePlatform {
   TestFirebaseStoragePlatform() : super(bucket: testBucket);
+
   @override
   FirebaseStoragePlatform delegateFor({FirebaseApp? app, String? bucket}) {
     return this;
@@ -120,7 +143,7 @@ class TestFirebaseStoragePlatform extends FirebaseStoragePlatform {
 // ReferencePlatform Mock
 class TestReferencePlatform extends ReferencePlatform {
   TestReferencePlatform() : super(TestFirebaseStoragePlatform(), testFullPath);
-  // @override
+// @override
 }
 
 // ReferencePlatform Mock

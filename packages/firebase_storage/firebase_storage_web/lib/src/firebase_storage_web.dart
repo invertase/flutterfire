@@ -1,8 +1,10 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core_web/firebase_core_web.dart';
 import 'package:firebase_core_web/firebase_core_web_interop.dart'
     as core_interop;
 import 'package:firebase_storage_platform_interface/firebase_storage_platform_interface.dart';
@@ -22,24 +24,32 @@ typedef ReferenceBuilder = ReferencePlatform Function(
 class FirebaseStorageWeb extends FirebaseStoragePlatform {
   /// Construct the plugin.
   FirebaseStorageWeb({FirebaseApp? app, required String bucket})
-      : webStorage = storage_interop.getStorageInstance(
-            core_interop.app(app?.name), bucket),
+      : _bucket = bucket,
         super(appInstance: app, bucket: bucket);
 
   // Empty constructor. This is only used by the registerWith method.
   // superclass also needs to be initialized and 'bucket' param is required.
   FirebaseStorageWeb._nullInstance()
-      : webStorage = null,
+      : _webStorage = null,
         super(bucket: '');
 
   /// Create a FirebaseStorageWeb injecting a [fb.Storage] object.
   @visibleForTesting
-  FirebaseStorageWeb.forMock(this.webStorage,
+  FirebaseStorageWeb.forMock(this._webStorage,
       {required String bucket, FirebaseApp? app})
       : super(appInstance: app, bucket: bucket);
 
   /// The js-interop layer for Firebase Storage
-  final storage_interop.Storage? webStorage;
+  storage_interop.Storage? _webStorage;
+
+  /// Keep the default bucket to pass it down to the [delegate] when first initialized
+  String? _bucket;
+
+  /// Lazily initialize [webStorage] on first method call
+  storage_interop.Storage get delegate {
+    return _webStorage ??=
+        storage_interop.getStorageInstance(core_interop.app(app.name), _bucket);
+  }
 
   // Same default as the method channel implementation
   int _maxDownloadRetryTime = const Duration(minutes: 10).inMilliseconds;
@@ -49,6 +59,7 @@ class FirebaseStorageWeb extends FirebaseStoragePlatform {
 
   /// Called by PluginRegistry to register this plugin for Flutter Web.
   static void registerWith(Registrar registrar) {
+    FirebaseCoreWeb.registerService('storage');
     FirebaseStoragePlatform.instance = FirebaseStorageWeb._nullInstance();
   }
 
@@ -68,7 +79,7 @@ class FirebaseStorageWeb extends FirebaseStoragePlatform {
   /// The maximum time to retry uploads in milliseconds.
   @override
   int get maxUploadRetryTime {
-    return webStorage!.maxUploadRetryTime;
+    return delegate.maxUploadRetryTime;
   }
 
   /// The maximum time to retry downloads in milliseconds.
@@ -104,18 +115,23 @@ class FirebaseStorageWeb extends FirebaseStoragePlatform {
   @override
   void setMaxOperationRetryTime(int time) {
     _maxOperationRetryTime = time;
-    webStorage!.setMaxOperationRetryTime(time);
+    delegate.maxOperationRetryTime = time;
   }
 
   /// The new maximum upload retry time in milliseconds.
   @override
   void setMaxUploadRetryTime(int time) {
-    webStorage!.setMaxUploadRetryTime(time);
+    delegate.maxUploadRetryTime = time;
   }
 
   /// The new maximum download retry time in milliseconds.
   @override
   void setMaxDownloadRetryTime(int time) {
     _maxDownloadRetryTime = time;
+  }
+
+  @override
+  Future<void> useStorageEmulator(String host, int port) async {
+    guard(() => delegate.useStorageEmulator(host, port));
   }
 }

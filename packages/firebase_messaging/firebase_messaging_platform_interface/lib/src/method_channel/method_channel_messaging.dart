@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -19,6 +20,7 @@ import 'utils/exception.dart';
 // from the native portion of the plugin. This allows for the plugin to perform
 // any necessary processing in Dart (e.g., populating a custom object) before
 // invoking the provided callback.
+@pragma('vm:entry-point')
 void _firebaseMessagingCallbackDispatcher() {
   // Initialize state necessary for MethodChannels.
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,12 +68,31 @@ void _firebaseMessagingCallbackDispatcher() {
 class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
   /// Create an instance of [MethodChannelFirebaseMessaging] with optional [FirebaseApp]
   MethodChannelFirebaseMessaging({required FirebaseApp app})
-      : super(appInstance: app) {
-    if (_initialized) return;
-    channel.setMethodCallHandler((MethodCall call) async {
+      : super(appInstance: app);
+
+  late bool _autoInitEnabled;
+
+  static bool _bgHandlerInitialized = false;
+
+  /// Returns a stub instance to allow the platform interface to access
+  /// the class instance statically.
+  static MethodChannelFirebaseMessaging get instance {
+    return MethodChannelFirebaseMessaging._();
+  }
+
+  /// Internal stub class initializer.
+  ///
+  /// When the user code calls an auth method, the real instance is
+  /// then initialized via the [delegateFor] method.
+  MethodChannelFirebaseMessaging._() : super(appInstance: null);
+
+  static void setMethodCallHandlers() {
+    MethodChannelFirebaseMessaging.channel
+        .setMethodCallHandler((MethodCall call) async {
       switch (call.method) {
         case 'Messaging#onTokenRefresh':
-          _tokenStreamController.add(call.arguments as String);
+          MethodChannelFirebaseMessaging.tokenStreamController
+              .add(call.arguments as String);
           break;
         case 'Messaging#onMessage':
           Map<String, dynamic> messageMap =
@@ -95,34 +116,34 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
           throw UnimplementedError('${call.method} has not been implemented');
       }
     });
-    _initialized = true;
   }
 
-  late bool _autoInitEnabled;
-
-  static bool _initialized = false;
-  static bool _bgHandlerInitialized = false;
-
-  /// Returns a stub instance to allow the platform interface to access
-  /// the class instance statically.
-  static MethodChannelFirebaseMessaging get instance {
-    return MethodChannelFirebaseMessaging._();
-  }
-
-  /// Internal stub class initializer.
-  ///
-  /// When the user code calls an auth method, the real instance is
-  /// then initialized via the [delegateFor] method.
-  MethodChannelFirebaseMessaging._() : super(appInstance: null);
-
-  /// The [MethodChannel] to which calls will be delegated.
-  @visibleForTesting
   static const MethodChannel channel = MethodChannel(
     'plugins.flutter.io/firebase_messaging',
   );
 
-  final StreamController<String> _tokenStreamController =
+  // ignore: close_sinks, never closed
+  static StreamController<String> tokenStreamController =
       StreamController<String>.broadcast();
+
+  // Created this to check APNS token is available before certain Apple Firebase
+  // Messaging requests. See this issue:
+  // https://github.com/firebase/flutterfire/issues/10625
+  Future<void> _APNSTokenCheck() async {
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      String? token = await getAPNSToken();
+
+      if (token == null) {
+        throw FirebaseException(
+          plugin: 'firebase_messaging',
+          code: 'apns-token-not-set',
+          message:
+              'APNS token has not been set yet. Please ensure the APNS token is available by calling `getAPNSToken()`.',
+        );
+      }
+    }
+  }
 
   @override
   FirebaseMessagingPlatform delegateFor({required FirebaseApp app}) {
@@ -140,6 +161,12 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
     return _autoInitEnabled;
   }
 
+  /// Returns "true" as this API is used to inform users of web browser support
+  @override
+  Future<bool> isSupported() {
+    return Future.value(true);
+  }
+
   @override
   Future<RemoteMessage?> getInitialMessage() async {
     try {
@@ -153,8 +180,8 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
       }
 
       return RemoteMessage.fromMap(remoteMessageMap);
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -168,7 +195,8 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
     if (!_bgHandlerInitialized) {
       _bgHandlerInitialized = true;
       final CallbackHandle bgHandle = PluginUtilities.getCallbackHandle(
-          _firebaseMessagingCallbackDispatcher)!;
+        _firebaseMessagingCallbackDispatcher,
+      )!;
       final CallbackHandle userHandle =
           PluginUtilities.getCallbackHandle(handler)!;
       await channel.invokeMapMethod('Messaging#startBackgroundIsolate', {
@@ -179,14 +207,14 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
   }
 
   @override
-  Future<void> deleteToken({
-    String? senderId,
-  }) async {
+  Future<void> deleteToken() async {
+    await _APNSTokenCheck();
+
     try {
-      await channel.invokeMapMethod(
-          'Messaging#deleteToken', {'appName': app.name, 'senderId': senderId});
-    } catch (e) {
-      throw convertPlatformException(e);
+      await channel
+          .invokeMapMethod('Messaging#deleteToken', {'appName': app.name});
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -203,35 +231,36 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
         'appName': app.name,
       });
 
-      return data?['token'];
-    } catch (e) {
-      throw convertPlatformException(e);
+      return data!['token'];
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<String?> getToken({
-    String? senderId,
     String? vapidKey, // not used yet; web only property
   }) async {
+    await _APNSTokenCheck();
+
     try {
       Map<String, String?>? data =
           await channel.invokeMapMethod<String, String>('Messaging#getToken', {
         'appName': app.name,
-        'senderId': senderId,
       });
 
-      return data?['token'];
-    } catch (e) {
-      throw convertPlatformException(e);
+      return data!['token'];
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<NotificationSettings> getNotificationSettings() async {
     if (defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.macOS) {
-      return androidNotificationSettings;
+        defaultTargetPlatform != TargetPlatform.macOS &&
+        defaultTargetPlatform != TargetPlatform.android) {
+      return defaultNotificationSettings;
     }
 
     try {
@@ -241,23 +270,26 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
       });
 
       return convertToNotificationSettings(response!);
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
-  Future<NotificationSettings> requestPermission(
-      {bool alert = true,
-      bool announcement = false,
-      bool badge = true,
-      bool carPlay = false,
-      bool criticalAlert = false,
-      bool provisional = false,
-      bool sound = true}) async {
+  Future<NotificationSettings> requestPermission({
+    bool alert = true,
+    bool announcement = false,
+    bool badge = true,
+    bool carPlay = false,
+    bool criticalAlert = false,
+    bool provisional = false,
+    bool sound = true,
+    bool providesAppNotificationSettings = false,
+  }) async {
     if (defaultTargetPlatform != TargetPlatform.iOS &&
-        defaultTargetPlatform != TargetPlatform.macOS) {
-      return androidNotificationSettings;
+        defaultTargetPlatform != TargetPlatform.macOS &&
+        defaultTargetPlatform != TargetPlatform.android) {
+      return defaultNotificationSettings;
     }
 
     try {
@@ -272,12 +304,13 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
           'criticalAlert': criticalAlert,
           'provisional': provisional,
           'sound': sound,
+          'providesAppNotificationSettings': providesAppNotificationSettings,
         }
       });
 
       return convertToNotificationSettings(response!);
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -290,15 +323,15 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
         'enabled': enabled,
       });
 
-      _autoInitEnabled = data?['isAutoInitEnabled'] as bool;
-    } catch (e) {
-      throw convertPlatformException(e);
+      _autoInitEnabled = data!['isAutoInitEnabled'] as bool;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Stream<String> get onTokenRefresh {
-    return _tokenStreamController.stream;
+    return tokenStreamController.stream;
   }
 
   @override
@@ -320,8 +353,8 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
         'badge': badge,
         'sound': sound,
       });
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -349,32 +382,53 @@ class MethodChannelFirebaseMessaging extends FirebaseMessagingPlatform {
         'messageType': messageType,
         'ttl': ttl,
       });
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> subscribeToTopic(String topic) async {
+    await _APNSTokenCheck();
+
     try {
       await channel.invokeMapMethod('Messaging#subscribeToTopic', {
         'appName': app.name,
         'topic': topic,
       });
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> unsubscribeFromTopic(String topic) async {
+    await _APNSTokenCheck();
+
     try {
       await channel.invokeMapMethod('Messaging#unsubscribeFromTopic', {
         'appName': app.name,
         'topic': topic,
       });
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<void> setDeliveryMetricsExportToBigQuery(bool enabled) async {
+    // The method is not available on iOS.
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    try {
+      await channel
+          .invokeMapMethod('Messaging#setDeliveryMetricsExportToBigQuery', {
+        'appName': app.name,
+        'enabled': enabled,
+      });
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 }

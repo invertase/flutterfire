@@ -1,8 +1,8 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:firebase_auth_platform_interface/src/platform_interface/platform_interface_user.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../../firebase_auth_platform_interface.dart';
@@ -21,8 +21,8 @@ abstract class UserCredentialPlatform extends PlatformInterface {
   static final Object _token = Object();
 
   /// Ensures that any delegate class has extended a [UserCredentialPlatform].
-  static void verifyExtends(UserCredentialPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+  static void verify(UserCredentialPlatform instance) {
+    PlatformInterface.verify(instance, _token);
   }
 
   /// The current FirebaseAuth instance.

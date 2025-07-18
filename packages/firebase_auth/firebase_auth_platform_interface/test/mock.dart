@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-
 import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
+import 'package:firebase_auth_platform_interface/src/method_channel/method_channel_firebase_auth.dart';
 import 'package:firebase_core_platform_interface/firebase_core_platform_interface.dart';
+import 'package:firebase_core_platform_interface/test.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_auth_platform_interface/src/method_channel/method_channel_firebase_auth.dart';
 
 typedef MethodCallCallback = dynamic Function(MethodCall methodCall);
 typedef Callback = void Function(MethodCall call);
@@ -22,43 +21,16 @@ int get nextMockHandleId => mockHandleId++;
 void setupFirebaseAuthMocks([Callback? customHandlers]) {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelFirebase.channel.setMockMethodCallHandler((call) async {
-    if (call.method == 'Firebase#initializeCore') {
-      return [
-        {
-          'name': defaultFirebaseAppName,
-          'options': {
-            'apiKey': '123',
-            'appId': '123',
-            'messagingSenderId': '123',
-            'projectId': '123',
-          },
-          'pluginConstants': {},
-        }
-      ];
-    }
-
-    if (call.method == 'Firebase#initializeApp') {
-      return {
-        'name': call.arguments['appName'],
-        'options': call.arguments['options'],
-        'pluginConstants': {},
-      };
-    }
-
-    if (customHandlers != null) {
-      customHandlers(call);
-    }
-
-    return null;
-  });
+  setupFirebaseCoreMocks();
 }
 
 void handleEventChannel(
   final String name, [
   List<MethodCall>? log,
 ]) {
-  MethodChannel(name).setMockMethodCallHandler((MethodCall methodCall) async {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(MethodChannel(name),
+          (MethodCall methodCall) async {
     log?.add(methodCall);
     switch (methodCall.method) {
       case 'listen':
@@ -67,12 +39,16 @@ void handleEventChannel(
       default:
         return null;
     }
+    return null;
   });
 }
 
 Future<void> injectEventChannelResponse(
-    String channelName, Map<String, dynamic> event) async {
-  await ServicesBinding.instance!.defaultBinaryMessenger.handlePlatformMessage(
+  String channelName,
+  Map<String, dynamic> event,
+) async {
+  await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .handlePlatformMessage(
     channelName,
     MethodChannelFirebaseAuth.channel.codec.encodeSuccessEnvelope(event),
     (_) {},
@@ -80,12 +56,15 @@ Future<void> injectEventChannelResponse(
 }
 
 void handleMethodCall(MethodCallCallback methodCallCallback) =>
-    MethodChannelFirebaseAuth.channel.setMockMethodCallHandler((call) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(MethodChannelFirebaseAuth.channel,
+            (call) async {
       return await methodCallCallback(call);
     });
 
 Future<void> simulateEvent(String name, Map<String, dynamic>? user) async {
-  await ServicesBinding.instance!.defaultBinaryMessenger.handlePlatformMessage(
+  await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .handlePlatformMessage(
     MethodChannelFirebaseAuth.channel.name,
     MethodChannelFirebaseAuth.channel.codec.encodeMethodCall(
       MethodCall(
@@ -106,16 +85,7 @@ Future<void> testExceptionHandling(
     anyOf([
       completes,
       if (type == 'PLATFORM' || type == 'EXCEPTION')
-        throwsA(isA<FirebaseAuthException>())
+        throwsA(isA<FirebaseAuthException>()),
     ]),
   );
-}
-
-Map<String, dynamic> generateUser(
-  Map<String, dynamic> user,
-  Map<String, dynamic> updatedInfo,
-) {
-  Map<String, dynamic> kMockUpdatedUser = Map<String, dynamic>.from(user);
-  kMockUpdatedUser.addAll(updatedInfo);
-  return kMockUpdatedUser;
 }

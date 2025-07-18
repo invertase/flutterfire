@@ -1,3 +1,545 @@
+## 11.5.2
+
+ - Update a dependency to the latest release.
+
+## 11.5.1
+
+ - Update a dependency to the latest release.
+
+## 11.5.0
+
+ - **FEAT**(analytics): add Pigeon support for firebase_analytics ([#17403](https://github.com/firebase/flutterfire/issues/17403)). ([57c09139](https://github.com/firebase/flutterfire/commit/57c091395d86a3a40c6520f4b5cffcd8165de4f1))
+
+## 11.4.6
+
+ - Update a dependency to the latest release.
+
+## 11.4.5
+
+ - Update a dependency to the latest release.
+
+## 11.4.4
+
+ - Update a dependency to the latest release.
+
+## 11.4.3
+
+ - **FIX**(analytics,apple): use correct tag for library name ([#17098](https://github.com/firebase/flutterfire/issues/17098)). ([ca28c304](https://github.com/firebase/flutterfire/commit/ca28c30445e426fff0098606e240e496de8b480c))
+
+## 11.4.2
+
+ - Update a dependency to the latest release.
+
+## 11.4.1
+
+ - Update a dependency to the latest release.
+
+## 11.4.0
+
+
+ - **FEAT**(analytics): Swift Package Manager support ([#13205](https://github.com/firebase/flutterfire/issues/13205)) ([#16790](https://github.com/firebase/flutterfire/issues/16790)). ([56051cf8](https://github.com/firebase/flutterfire/commit/56051cf8570a4b7d3ebc86d4d1cae484f4b116a5))
+
+## 11.3.6
+
+ - Update a dependency to the latest release.
+
+## 11.3.5
+
+ - Update a dependency to the latest release.
+
+## 11.3.4
+
+ - Update a dependency to the latest release.
+
+## 11.3.3
+
+ - **FIX**(all,apple): use modular headers to import ([#13400](https://github.com/firebase/flutterfire/issues/13400)). ([d7d2d4b9](https://github.com/firebase/flutterfire/commit/d7d2d4b93e7c00226027fffde46699f3d5388a41))
+
+## 11.3.2
+
+ - Update a dependency to the latest release.
+
+## 11.3.1
+
+ - Update a dependency to the latest release.
+
+## 11.3.0
+
+ - **FEAT**: bump iOS SDK to version 11.0.0 ([#13158](https://github.com/firebase/flutterfire/issues/13158)). ([c0e0c997](https://github.com/firebase/flutterfire/commit/c0e0c99703ea394d1bb873ac225c5fe3539b002d))
+ - **DOCS**: remove reference to flutter.io and firebase.flutter.dev ([#13152](https://github.com/firebase/flutterfire/issues/13152)). ([5f0874b9](https://github.com/firebase/flutterfire/commit/5f0874b91e28a203dd62d37d391e5760c91f5729))
+
+## 11.2.1
+
+ - Update a dependency to the latest release.
+
+## 11.2.0
+
+ - **FEAT**(analytics,web): add support for options on Web ([#12914](https://github.com/firebase/flutterfire/issues/12914)). ([dd7ce8c2](https://github.com/firebase/flutterfire/commit/dd7ce8c20c28d7bd67cee9b7542af2e38c1aa6c7))
+
+## 11.1.0
+
+ - **FEAT**(analytics,ios): add support for `initiateOnDeviceConversionMeasurementWithPhoneNumber` and `initiateOnDeviceConversionMeasurementWithHashedEmailAddress` ([#12976](https://github.com/firebase/flutterfire/issues/12976)). ([1e25ec1e](https://github.com/firebase/flutterfire/commit/1e25ec1e55d7e9ecb79e5edb98ae9592a387d0b0))
+
+## 11.0.1
+
+ - Update a dependency to the latest release.
+
+## 11.0.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **REFACTOR**: android plugins require `minSdk 21`, auth requires `minSdk 23` ahead of android BOM `>=33.0.0` ([#12873](https://github.com/firebase/flutterfire/issues/12873)). ([52accfc6](https://github.com/firebase/flutterfire/commit/52accfc6c39d6360d9c0f36efe369ede990b7362))
+ - **BREAKING** **REFACTOR**: bump all iOS deployment targets to iOS 13 ahead of Firebase iOS SDK `v11` breaking change ([#12872](https://github.com/firebase/flutterfire/issues/12872)). ([de0cea2c](https://github.com/firebase/flutterfire/commit/de0cea2c3c36694a76361be784255986fac84a43))
+ - **BREAKING** **REFACTOR**(analytics): remove deprecated API ahead of breaking change release ([#12858](https://github.com/firebase/flutterfire/issues/12858)). ([f22f46a1](https://github.com/firebase/flutterfire/commit/f22f46a117efd91c617de0412195ac7d4faabb3e))
+ - **BREAKING** **FIX**(analytics): fix typing of event parameters to `Map<String, Object>?` ([#12427](https://github.com/firebase/flutterfire/issues/12427)). ([3705ee1b](https://github.com/firebase/flutterfire/commit/3705ee1b35cd2194cca4ca1057384b04b48ccf90))
+
+## 10.10.7
+
+ - Update a dependency to the latest release.
+
+## 10.10.6
+
+ - Update a dependency to the latest release.
+
+## 10.10.5
+
+ - Update a dependency to the latest release.
+
+## 10.10.4
+
+ - Update a dependency to the latest release.
+
+## 10.10.3
+
+ - Update a dependency to the latest release.
+
+## 10.10.2
+
+ - Update a dependency to the latest release.
+
+## 10.10.1
+
+ - Update a dependency to the latest release.
+
+## 10.10.0
+
+ - **FEAT**(android): Bump `compileSdk` version of Android plugins to latest stable (34) ([#12566](https://github.com/firebase/flutterfire/issues/12566)). ([e891fab2](https://github.com/firebase/flutterfire/commit/e891fab291e9beebc223000b133a6097e066a7fc))
+
+## 10.9.0
+
+ - **FEAT**(analytics): add consent mode v2 ([#12298](https://github.com/firebase/flutterfire/issues/12298)). ([19f3dbdd](https://github.com/firebase/flutterfire/commit/19f3dbdd197c57cf95853448f9541f6cebfe810c))
+
+## 10.8.10
+
+ - Update a dependency to the latest release.
+
+## 10.8.9
+
+ - Update a dependency to the latest release.
+
+## 10.8.8
+
+ - Update a dependency to the latest release.
+
+## 10.8.7
+
+ - Update a dependency to the latest release.
+
+## 10.8.6
+
+ - Update a dependency to the latest release.
+
+## 10.8.5
+
+ - Update a dependency to the latest release.
+
+## 10.8.4
+
+ - Update a dependency to the latest release.
+
+## 10.8.3
+
+ - Update a dependency to the latest release.
+
+## 10.8.2
+
+ - Update a dependency to the latest release.
+
+## 10.8.1
+
+ - **FIX**(analytics): `setCurrentScreen()` was deprecated, using `logScreenView()` instead ([#12085](https://github.com/firebase/flutterfire/issues/12085)). ([c6341b92](https://github.com/firebase/flutterfire/commit/c6341b92209d6ac80733eb7bfdbac679f44306ec))
+ - **DOCS**: change old documentation links of packages in README files ([#12136](https://github.com/firebase/flutterfire/issues/12136)). ([24b9ac7e](https://github.com/firebase/flutterfire/commit/24b9ac7ec29fc9ca466c0941c2cff26d75b8568d))
+
+## 10.8.0
+
+ - **FEAT**(analytics,ios): add support for initiateOnDeviceConversionMeasurement using email address or phone number ([#11926](https://github.com/firebase/flutterfire/issues/11926)). ([9bc83f1e](https://github.com/firebase/flutterfire/commit/9bc83f1e6770d263092f6367ca3cfe46a83bb1b1))
+
+## 10.7.4
+
+ - Update a dependency to the latest release.
+
+## 10.7.3
+
+ - **FIX**(analytics): fix the toString method on AnalyticsEventItem to print out its content ([#11977](https://github.com/firebase/flutterfire/issues/11977)). ([5fe96ece](https://github.com/firebase/flutterfire/commit/5fe96ece22847e29d2007afe2f6b85b3d6ce4b94))
+
+## 10.7.2
+
+ - Update a dependency to the latest release.
+
+## 10.7.1
+
+ - Update a dependency to the latest release.
+
+## 10.7.0
+
+ - **FEAT**(firebase_analytics): allow custom parameters (strings and numbers) for events and event items ([#11030](https://github.com/firebase/flutterfire/issues/11030)). ([81dfec93](https://github.com/firebase/flutterfire/commit/81dfec93bcc9490f84fd1e8e3e1bc3737f5eed43))
+
+## 10.6.4
+
+ - Update a dependency to the latest release.
+
+## 10.6.3
+
+ - Update a dependency to the latest release.
+
+## 10.6.2
+
+ - Update a dependency to the latest release.
+
+## 10.6.1
+
+ - Update a dependency to the latest release.
+
+## 10.6.0
+
+ - **FEAT**: Full support of AGP 8 ([#11699](https://github.com/firebase/flutterfire/issues/11699)). ([bdb5b270](https://github.com/firebase/flutterfire/commit/bdb5b27084d225809883bdaa6aa5954650551927))
+
+## 10.5.1
+
+ - Update a dependency to the latest release.
+
+## 10.5.0
+
+ - **FEAT**(firebase_analytics): support `getSessionId` for android and apple platforms ([#11478](https://github.com/firebase/flutterfire/issues/11478)). ([13aaf03d](https://github.com/firebase/flutterfire/commit/13aaf03dc2050514cea97023fae5c27491bcac8a))
+
+## 10.4.5
+
+ - Update a dependency to the latest release.
+
+## 10.4.4
+
+ - Update a dependency to the latest release.
+
+## 10.4.3
+
+ - Update a dependency to the latest release.
+
+## 10.4.2
+
+ - Update a dependency to the latest release.
+
+## 10.4.1
+
+ - Update a dependency to the latest release.
+
+## 10.4.0
+
+ - **FEAT**: update dependency constraints to `sdk: '>=2.18.0 <4.0.0'` `flutter: '>=3.3.0'` ([#10946](https://github.com/firebase/flutterfire/issues/10946)). ([2772d10f](https://github.com/firebase/flutterfire/commit/2772d10fe510dcc28ec2d37a26b266c935699fa6))
+ - **FEAT**: update libraries to be compatible with Flutter 3.10.0 ([#10944](https://github.com/firebase/flutterfire/issues/10944)). ([e1f5a5ea](https://github.com/firebase/flutterfire/commit/e1f5a5ea798c54f19d1d2f7b8f2250f8819f44b7))
+
+## 10.3.0
+
+ - **FIX**: add support for AGP 8.0 ([#10901](https://github.com/firebase/flutterfire/issues/10901)). ([a3b96735](https://github.com/firebase/flutterfire/commit/a3b967354294c295a9be8d699a6adb7f4b1dba7f))
+ - **FEAT**: upgrade to dart 3 compatible dependencies ([#10890](https://github.com/firebase/flutterfire/issues/10890)). ([4bd7e59b](https://github.com/firebase/flutterfire/commit/4bd7e59b1f2b09a2230c49830159342dd4592041))
+
+## 10.2.1
+
+ - Update a dependency to the latest release.
+
+## 10.2.0
+
+ - **FEAT**: bump dart sdk constraint to 2.18 ([#10618](https://github.com/firebase/flutterfire/issues/10618)). ([f80948a2](https://github.com/firebase/flutterfire/commit/f80948a28b62eead358bdb900d5a0dfb97cebb33))
+
+## 10.1.6
+
+ - Update a dependency to the latest release.
+
+## 10.1.5
+
+ - Update a dependency to the latest release.
+
+## 10.1.4
+
+ - Update a dependency to the latest release.
+
+## 10.1.3
+
+ - Update a dependency to the latest release.
+
+## 10.1.2
+
+ - Update a dependency to the latest release.
+
+## 10.1.1
+
+ - **REFACTOR**: upgrade project to remove warnings from Flutter 3.7 ([#10344](https://github.com/firebase/flutterfire/issues/10344)). ([e0087c84](https://github.com/firebase/flutterfire/commit/e0087c845c7526c11a4241a26d39d4673b0ad29d))
+ - **DOCS**: add more documentation for `logEvent` ([#10389](https://github.com/firebase/flutterfire/issues/10389)). ([8755d776](https://github.com/firebase/flutterfire/commit/8755d776b30ce2db71e00279438c8d3617cf3187))
+
+## 10.1.0
+
+ - **FEAT**: update `logEvent()` & `setDefaultParameters()` to assert input types. ([#9520](https://github.com/firebase/flutterfire/issues/9520)). ([bac87e96](https://github.com/firebase/flutterfire/commit/bac87e96ba4d7fd68525207b5be1db425bf446d2))
+
+## 10.0.8
+
+ - Update a dependency to the latest release.
+
+## 10.0.7
+
+ - Update a dependency to the latest release.
+
+## 10.0.6
+
+ - Update a dependency to the latest release.
+
+## 10.0.5
+
+ - Update a dependency to the latest release.
+
+## 10.0.4
+
+ - Update a dependency to the latest release.
+
+## 10.0.3
+
+ - Update a dependency to the latest release.
+
+## 10.0.2
+
+ - Update a dependency to the latest release.
+
+## 10.0.1
+
+- Update a dependency to the latest release.
+
+## 10.0.0
+
+> Note: This release has breaking changes.
+
+ - **BREAKING** **FEAT**: Firebase iOS SDK version: `10.0.0` ([#9708](https://github.com/firebase/flutterfire/issues/9708)). ([9627c56a](https://github.com/firebase/flutterfire/commit/9627c56a37d657d0250b6f6b87d0fec1c31d4ba3))
+
+## 9.3.8
+
+ - Update a dependency to the latest release.
+
+## 9.3.7
+
+ - Update a dependency to the latest release.
+
+## 9.3.6
+
+ - **FIX**: suppress unchecked warnings that aren't necessary ([#9532](https://github.com/firebase/flutterfire/issues/9532)). ([3ebd4593](https://github.com/firebase/flutterfire/commit/3ebd4593d11fbbd359b8d514a9c0577654859992))
+
+## 9.3.5
+
+ - **REFACTOR**: deprecate `signInWithAuthProvider` in favor of `signInWithProvider` ([#9542](https://github.com/firebase/flutterfire/issues/9542)). ([ca340ea1](https://github.com/firebase/flutterfire/commit/ca340ea19c8dbb340f083e48cf1b0de36f7d64c4))
+
+## 9.3.4
+
+ - Update a dependency to the latest release.
+
+## 9.3.3
+
+ - Update a dependency to the latest release.
+
+## 9.3.2
+
+ - Update a dependency to the latest release.
+
+## 9.3.1
+
+ - Update a dependency to the latest release.
+
+## 9.3.0
+
+ - **FEAT**: retrieves `appInstanceId` property on native platforms if available ([#8689](https://github.com/firebase/flutterfire/issues/8689)). ([7132d771](https://github.com/firebase/flutterfire/commit/7132d771ed5ada7a0433232b9f0d996ef0d61481))
+
+## 9.2.1
+
+ - **FIX**: allow `null` values for `setDefaultEventParameters()` which removes defaults. Permissible on android and iOS. ([#9135](https://github.com/firebase/flutterfire/issues/9135)). ([dff46a3f](https://github.com/firebase/flutterfire/commit/dff46a3f33d0b9881864f79be659b2770526677d))
+
+## 9.2.0
+
+ - **FEAT**: upgrade to support v9.8.1 Firebase JS SDK ([#8235](https://github.com/firebase/flutterfire/issues/8235)). ([4b417af5](https://github.com/firebase/flutterfire/commit/4b417af574bb8a32ca8e4b3ab2ff253a22be9903))
+
+## 9.1.12
+
+ - **FIX**: bump `firebase_core_platform_interface` version to fix previous release. ([bea70ea5](https://github.com/firebase/flutterfire/commit/bea70ea5cbbb62cbfd2a7a74ae3a07cb12b3ee5a))
+
+## 9.1.11
+
+ - Update a dependency to the latest release.
+
+## 9.1.10
+
+ - **REFACTOR**: remove deprecated `Tasks.call` for android and replace with `TaskCompletionSource`. (#8583). ([94310ab3](https://github.com/firebase/flutterfire/commit/94310ab338ad1bf34174b19d1d5db8a856e8d161))
+ - **REFACTOR**: use `firebase.google.com` link for `homepage` in `pubspec.yaml` (#8726). ([ab2cdfcd](https://github.com/firebase/flutterfire/commit/ab2cdfcd291a1045add1ba196b758e1d46571934))
+ - **REFACTOR**: use "firebase" instead of "FirebaseExtended" as organisation in all links for this repository (#8791). ([d90b8357](https://github.com/firebase/flutterfire/commit/d90b8357db01d65e753021358668f0b129713e6b))
+ - **DOCS**: point to "firebase.google" domain for hyperlinks in the usage section of `README.md` files (for the missing packages) (#8818). ([5bda8c92](https://github.com/firebase/flutterfire/commit/5bda8c92be1651a941d1285d36e885ee0b967b11))
+
+## 9.1.9
+
+ - Update a dependency to the latest release.
+
+## 9.1.8
+
+ - Update a dependency to the latest release.
+
+## 9.1.7
+
+ - Update a dependency to the latest release.
+
+## 9.1.6
+
+ - **REFACTOR**: Update deployment target to `10.0` for Firebase Analytics podspec. (#8371). ([fe709da9](https://github.com/firebase/flutterfire/commit/fe709da998162a3b884070df6666690ae560d0d1))
+
+## 9.1.5
+
+ - Update a dependency to the latest release.
+
+## 9.1.4
+
+ - **FIX**: Send default parameters for iOS when using `setDefaultEventParameters()` API. (#8402). ([7d3e5ba6](https://github.com/firebase/flutterfire/commit/7d3e5ba6e4ee0bff178c5cfb73d34cdd3a7064e0))
+
+## 9.1.3
+
+ - Update a dependency to the latest release.
+
+## 9.1.2
+
+ - **FIX**: update all Dart SDK version constraints to Dart >= 2.16.0 (#8184). ([df4a5bab](https://github.com/firebase/flutterfire/commit/df4a5bab3c029399b4f257a5dd658d302efe3908))
+
+## 9.1.1
+
+ - **DOCS**: code comment typo - `logAdImpression` mentions wrong event (#8180). ([960a75a7](https://github.com/firebase/flutterfire/commit/960a75a77dc8c575e7f8f9c4350ad564a3814eb8))
+
+## 9.1.0
+
+ - **FEAT**: Improve `FirebaseAnalyticsObserver` so that it also fires events when the modal route changes. (#7711). ([f3bb2055](https://github.com/firebase/flutterfire/commit/f3bb205594b3920f37eb4476c324e463f942c451))
+
+## 9.0.5
+
+ - **FIX**: bump Android `compileSdkVersion` to 31 (#7726). ([a9562bac](https://github.com/firebase/flutterfire/commit/a9562bac60ba927fb3664a47a7f7eaceb277dca6))
+ - **FIX**: user id and user properties can be null so `NSNull` should be converted to `nil` on iOS/macOS (#7810). ([f588cf38](https://github.com/firebase/flutterfire/commit/f588cf381135c6d51d472e7f744e72d7f6a69240))
+ - **FIX**: `setUserProperty` should now accept null as a valid value on Android (#7735). ([c2237acb](https://github.com/firebase/flutterfire/commit/c2237acb25903d2466db76a9c4fd2f14701369b6))
+ - **DOCS**: example app initialization and docs support status (#7745). ([ac21f485](https://github.com/firebase/flutterfire/commit/ac21f4855359d9c8452e60917b1992d8ad0f7a5e))
+
+## 9.0.4
+
+ - **REFACTOR**: fix all `unnecessary_import` analyzer issues introduced with Flutter 2.8. ([7f0e82c9](https://github.com/firebase/flutterfire/commit/7f0e82c978a3f5a707dd95c7e9136a3e106ff75e))
+
+## 9.0.3
+
+ - **FIX**: ensure `setDefaultEventParameters()` API throws stating not supported on web. (#7522). ([9a83f121](https://github.com/firebase/flutterfire/commit/9a83f1219e33090bc8dbdd9bf26316e7fc6e7979))
+ - **FIX**: reinstate Analytics screen navigation observer. (#7529). ([caf2986e](https://github.com/firebase/flutterfire/commit/caf2986ec76b0d761c2ef863af4c16f02fc4638f))
+ - **FIX**: userId can be null (#7545). ([0d3b523c](https://github.com/firebase/flutterfire/commit/0d3b523c3a2d1cd1d8c1ec17f7579727e88e5cb6))
+
+## 9.0.2
+
+ - Update a dependency to the latest release.
+
+## 9.0.1
+
+ - **FIX**: use `jsify()` with event parameters for `logEvent()` so they are sent (#7509).
+
+## 9.0.0
+
+> Note: This release has breaking changes.
+
+As part of our on-going work for [#6769](https://github.com/firebase/flutterfire/issues/6979) this is our Firebase Analytics rework changes.
+
+Overall, Firebase Analytics has been heavily reworked to bring it inline with the federated plugin setup along with adding new features,
+documentation and updating unit and end-to-end tests.
+
+- **DEPRECATED**: `FirebaseAnalytics.android` namespace has been deprecated in favour of calling `setSessionTimeoutDuration()` directly: `FirebaseAnalytics.instance.setSessionTimeoutDuration(const Duration(milliseconds: 2000))`.
+- **DEPRECATED**: `logEcommercePurchase()` has been deprecated in favour of using `logPurchase()`.
+- **DEPRECATED**: `logPresentOffer()` has been deprecated in favour of using `logViewPromotion()`.
+- **DEPRECATED**: `logPurchaseRefund()` has been deprecated in favour of using `logRefund()`.
+- **DEPRECATED**: `logSetCheckoutOption()` has been deprecated.
+
+- **BREAKING** **FEAT**: update Android `minSdk` version to 19 as this is required by Firebase Android SDK `29.0.0` (#7298).
+- **BREAKING**: `FirebaseAnalyticsObserver()` class has been removed.
+- **BREAKING**: Constructing a `FirebaseAnalytics` instance is now deprecated, use `FirebaseAnalytics.instanceFor` (web only) or `FirebaseAnalytics.instance` instead.
+- **BREAKING**: `logAddPaymentInfo()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logAddToCart()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logAddToWishlist()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logBeginCheckout()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logRemoveFromCart()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logViewItem()` updated parameters to be logged in Analytics console.
+- **BREAKING**: `logViewItemList()` updated parameters to be logged in Analytics console.
+
+- **NEW**: `logAddShippingInfo()` added support for logging shipping information.
+- **NEW**: `logAdImpression()` added support for logging ad impression.
+- **NEW**: `logPurchase()` added support for logging a purchase.
+- **NEW**: `logRefund()` added support for logging a refund.
+- **NEW**: `logScreenView()` added support for logging a screen view.
+- **NEW**: `logSelectItem()` added support for logging a item that has been selected.
+- **NEW**: `logSelectPromotion()` added support for logging a promotion that has been selected.
+- **NEW**: `logViewCart()` added support for logging a view of the current cart.
+- **NEW**: `logViewPromotion()` added support for logging a view of the current promotion.
+- **NEW**: `setConsent()` added support for setting the applicable end user consent state (e.g., for device identifiers) for the app on this device.
+- **NEW**: `setDefaultEventParameters()` added support for setting default parameters that will be set on every event logged from the SDK, including automatic ones.
+
+## 8.3.4
+
+ - **REFACTOR**: remove deprecated Flutter Android v1 Embedding usages, including in example app (#7158).
+
+## 8.3.3
+
+ - **DOCS**: boolean parameters are not supported for GA custom definitions. (#7037).
+ - **CHORE**: update gradle for analytics example app (#7053).
+
+## 8.3.2
+
+ - **FIX**: Fix incorrect type name in error message (#6917).
+
+## 8.3.1
+
+ - Update a dependency to the latest release.
+
+## 8.3.0
+
+ - **STYLE**: enable additional lint rules (#6832).
+ - **FIX**: Use angle bracket import consistently when importing Firebase.h for iOS (#5891).
+ - **FEAT**: lower iOS & macOS deployment targets for relevant plugins (#6757).
+
+## 8.2.0
+
+ - **FEAT**: firebase_analytics plugin with AnalyticsWithoutAdIdSupport pod (#6046).
+ - **CHORE**: update v2 embedding support (#6506).
+ - **CHORE**: rm deprecated jcenter repository (#6431).
+
+## 8.1.2
+
+ - Update a dependency to the latest release.
+
+## 8.1.1
+
+ - Update a dependency to the latest release.
+
+## 8.1.0
+
+ - **FEAT**: upgrade Firebase JS SDK version to 8.6.1.
+ - **REFACTOR**: replace deprecated `setCurrentScreen` internal method usage with new `logEvent` name.
+ - **DOCS**: migrate firebase_analytics/example to null safety (#6111).
+
+## 8.0.4
+
+ - Update a dependency to the latest release.
+
+## 8.0.3
+
+ - **DOCS**: remove invalid codelabs link.
+
 ## 8.0.2
 
  - Update a dependency to the latest release.

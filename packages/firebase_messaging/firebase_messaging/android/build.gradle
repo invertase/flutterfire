@@ -1,25 +1,24 @@
 group 'io.flutter.plugins.firebasemessaging'
 version '1.0-SNAPSHOT'
 
+apply plugin: 'com.android.library'
+apply from: file("local-config.gradle")
+
+androidGradlePluginVersion = project.ext.androidGradlePluginVersion
+
 buildscript {
   repositories {
     google()
-    jcenter()
-  }
-
-  dependencies {
-    classpath 'com.android.tools.build:gradle:3.5.4'
+    mavenCentral()
   }
 }
 
 rootProject.allprojects {
   repositories {
     google()
-    jcenter()
+    mavenCentral()
   }
 }
-
-apply plugin: 'com.android.library'
 
 def firebaseCoreProject = findProject(':firebase_core')
 if (firebaseCoreProject == null) {
@@ -35,24 +34,37 @@ def getRootProjectExtOrCoreProperty(name, firebaseCoreProject) {
 }
 
 android {
-  compileSdkVersion 29
-  compileOptions {
-    sourceCompatibility JavaVersion.VERSION_1_8
-    targetCompatibility JavaVersion.VERSION_1_8
+  // Conditional for compatibility with AGP <4.2.
+  if (project.android.hasProperty("namespace")) {
+    namespace 'io.flutter.plugins.firebase.messaging'
   }
+
+  compileSdkVersion project.ext.compileSdk
+
   defaultConfig {
-    minSdkVersion 16
-    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+      minSdkVersion project.ext.minSdk
+      testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
   }
+
+  compileOptions {
+      sourceCompatibility project.ext.javaVersion
+      targetCompatibility project.ext.javaVersion
+  }
+
+  buildFeatures {
+    buildConfig = true
+  }
+
   lintOptions {
     disable 'InvalidPackage'
   }
+
   dependencies {
     api firebaseCoreProject
     implementation platform("com.google.firebase:firebase-bom:${getRootProjectExtOrCoreProperty("FirebaseSDKVersion", firebaseCoreProject)}")
     implementation 'com.google.firebase:firebase-messaging'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation 'androidx.annotation:annotation:1.1.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation 'androidx.annotation:annotation:1.7.1'
   }
 }
 

@@ -1,13 +1,16 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:html' as html;
+import 'dart:convert';
+import 'dart:js_interop';
 import 'dart:typed_data';
 
 import 'package:firebase_storage_platform_interface/firebase_storage_platform_interface.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
+import 'package:web/web.dart' as web;
 
 import './firebase_storage_web.dart';
 import './utils/errors.dart';
@@ -27,9 +30,9 @@ class ReferenceWeb extends ReferencePlatform {
       : _path = path,
         super(storage, path) {
     if (_path.startsWith(_storageUrlPrefix)) {
-      _ref = storage.webStorage!.refFromURL(_path);
+      _ref = storage.delegate.refFromURL(_path);
     } else {
-      _ref = storage.webStorage!.ref(_path);
+      _ref = storage.delegate.ref(_path);
     }
   }
 
@@ -116,7 +119,7 @@ class ReferenceWeb extends ReferencePlatform {
   Future<Uint8List?> getData(
     int maxSize, {
     @visibleForTesting
-        Future<Uint8List> Function(Uri url) readBytes = http.readBytes,
+    Future<Uint8List> Function(Uri url) readBytes = http.readBytes,
   }) async {
     if (maxSize > 0) {
       final metadata = await getMetadata();
@@ -141,7 +144,7 @@ class ReferenceWeb extends ReferencePlatform {
     return TaskWeb(
       this,
       _ref.put(
-        data,
+        data.toJS,
         settableMetadataToFbUploadMetadata(
           _cache.store(metadata),
         ),
@@ -154,7 +157,7 @@ class ReferenceWeb extends ReferencePlatform {
   /// Optionally, you can also set metadata onto the uploaded object.
   @override
   TaskPlatform putBlob(dynamic data, [SettableMetadata? metadata]) {
-    assert(data is html.Blob, 'data must be a dart:html Blob object.');
+    assert(data is web.Blob, 'data must be a package:web Blob object.');
 
     return TaskWeb(
       this,
@@ -184,13 +187,27 @@ class ReferenceWeb extends ReferencePlatform {
     PutStringFormat format, [
     SettableMetadata? metadata,
   ]) {
+    late Uint8List _data;
+
+    // The universal package is converting raw to base64, so we need to convert
+    // Any base64 string values into a Uint8List.
+    if (format == PutStringFormat.base64) {
+      _data = base64Decode(data);
+    } else if (format == PutStringFormat.base64Url) {
+      _data = base64Url.decode(data);
+    } else {
+      // If the format is not base64 or base64Url, we need to encode the data
+      // as a base64 string.
+      _data = Uint8List.fromList(base64Encode(utf8.encode(data)).codeUnits);
+    }
+
     return TaskWeb(
       this,
-      _ref.putString(
-        data,
-        putStringFormatToString(format),
+      _ref.put(
+        _data.toJS,
         settableMetadataToFbUploadMetadata(
           _cache.store(metadata),
+          // md5 is computed server-side, so we don't have to unpack a potentially huge Blob.
         ),
       ),
     );
@@ -207,8 +224,8 @@ class ReferenceWeb extends ReferencePlatform {
     });
   }
 
-  // Purposefully left unimplemented because of lack of dart:io support in web:
+// Purposefully left unimplemented because of lack of dart:io support in web:
 
-  // TaskPlatform writeToFile(File file) {}
-  // TaskPlatform putFile(File file, [SettableMetadata metadata]) {}
+// TaskPlatform writeToFile(File file) {}
+// TaskPlatform putFile(File file, [SettableMetadata metadata]) {}
 }

@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -5,41 +6,41 @@
 import 'dart:async';
 
 import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
-import 'package:firebase_auth_platform_interface/src/action_code_settings.dart';
-import 'package:firebase_auth_platform_interface/src/user_info.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// A user account.
 abstract class UserPlatform extends PlatformInterface {
   // ignore: public_member_api_docs
-  UserPlatform(this.auth, Map<String, dynamic> user)
+  UserPlatform(this.auth, this.multiFactor, PigeonUserDetails user)
       : _user = user,
         super(token: _token);
 
   static final Object _token = Object();
 
   /// Ensures that any delegate class has extended a [UserPlatform].
-  static void verifyExtends(UserPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+  static void verify(UserPlatform instance) {
+    PlatformInterface.verify(instance, _token);
   }
 
   /// The [FirebaseAuthPlatform] instance.
   final FirebaseAuthPlatform auth;
 
-  final Map<String, dynamic> _user;
+  final MultiFactorPlatform multiFactor;
+
+  final PigeonUserDetails _user;
 
   /// The users display name.
   ///
   /// Will be `null` if signing in anonymously or via password authentication.
   String? get displayName {
-    return _user['displayName'];
+    return _user.userInfo.displayName;
   }
 
   /// The users email address.
   ///
   /// Will be `null` if signing in anonymously.
   String? get email {
-    return _user['email'];
+    return _user.userInfo.email;
   }
 
   /// Returns whether the users email address has been verified.
@@ -48,19 +49,21 @@ abstract class UserPlatform extends PlatformInterface {
   ///
   /// Once verified, call [reload] to ensure the latest user information is
   /// retrieved from Firebase.
-  bool get emailVerified {
-    return _user['emailVerified'];
+  bool get isEmailVerified {
+    return _user.userInfo.isEmailVerified;
   }
 
   /// Returns whether the user is a anonymous.
   bool get isAnonymous {
-    return _user['isAnonymous'];
+    return _user.userInfo.isAnonymous;
   }
 
   /// Returns additional metadata about the user, such as their creation time.
   UserMetadata get metadata {
     return UserMetadata(
-        _user['metadata']['creationTime'], _user['metadata']['lastSignInTime']);
+      _user.userInfo.creationTimestamp,
+      _user.userInfo.lastSignInTimestamp,
+    );
   }
 
   /// Returns the users phone number.
@@ -68,7 +71,7 @@ abstract class UserPlatform extends PlatformInterface {
   /// This property will be `null` if the user has not signed in or been has
   /// their phone number linked.
   String? get phoneNumber {
-    return _user['phoneNumber'];
+    return _user.userInfo.phoneNumber;
   }
 
   /// Returns a photo URL for the user.
@@ -76,22 +79,25 @@ abstract class UserPlatform extends PlatformInterface {
   /// This property will be populated if the user has signed in or been linked
   /// with a 3rd party OAuth provider (such as Google).
   String? get photoURL {
-    return _user['photoURL'];
+    return _user.userInfo.photoUrl;
   }
 
   /// Returns a list of user information for each linked provider.
   List<UserInfo> get providerData {
-    return List.from(_user['providerData'])
-        .map((data) => UserInfo(Map<String, String?>.from(data)))
-        .toList();
+    final inputData = _user.providerData.nonNulls;
+    final List<UserInfo> providerData = [];
+    for (final Map<Object?, Object?> info in inputData) {
+      providerData.add(UserInfo.fromJson(info));
+    }
+    return providerData;
   }
 
   /// Returns a JWT refresh token for the user.
   ///
-  /// This property maybe `null` or empty if the underlying platform does not
-  /// support providing refresh tokens.
+  /// This property will be an empty string for native platforms (android, iOS & macOS) as they do not
+  /// support refresh tokens.
   String? get refreshToken {
-    return _user['refreshToken'];
+    return _user.userInfo.refreshToken;
   }
 
   /// The current user's tenant ID.
@@ -100,12 +106,12 @@ abstract class UserPlatform extends PlatformInterface {
   /// in the current user. This is `null` if the user is signed in from the
   /// parent project.
   String? get tenantId {
-    return _user['tenantId'];
+    return _user.userInfo.tenantId;
   }
 
   /// The user's unique ID.
   String get uid {
-    return _user['uid'];
+    return _user.userInfo.uid;
   }
 
   /// Deletes and signs out the user.
@@ -131,12 +137,15 @@ abstract class UserPlatform extends PlatformInterface {
   ///
   /// If [forceRefresh] is `true`, the token returned will be refresh regardless
   /// of token expiration.
-  Future<String> getIdToken(bool forceRefresh) {
+  Future<String?> getIdToken(bool forceRefresh) {
     throw UnimplementedError('getIdToken() is not implemented');
   }
 
   /// Returns a [IdTokenResult] containing the users JSON Web Token (JWT) and
   /// other metadata.
+  ///
+  /// Returns the current token if it has not expired. Otherwise, this will
+  /// refresh the token and return a new one.
   ///
   /// If [forceRefresh] is `true`, the token returned will be refresh regardless
   /// of token expiration.
@@ -187,6 +196,187 @@ abstract class UserPlatform extends PlatformInterface {
   ///    verification ID of the credential is not valid.
   Future<UserCredentialPlatform> linkWithCredential(AuthCredential credential) {
     throw UnimplementedError('linkWithCredential() is not implemented');
+  }
+
+  /// Signs in with an AuthProvider using native authentication flow.
+  /// On Web you should use [linkWithPopup] or [linkWithRedirect] instead.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **provider-already-linked**:
+  ///  - Thrown if the provider has already been linked to the user. This error
+  ///    is thrown even if this is not the same provider's account that is
+  ///    currently linked to the user.
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **credential-already-in-use**:
+  ///  - Thrown if the account corresponding to the credential already exists
+  ///    among your users, or is already linked to a Firebase User. For example,
+  ///    this error could be thrown if you are upgrading an anonymous user to a
+  ///    Google user by linking a Google credential to it and the Google
+  ///    credential used is already associated with an existing Firebase Google
+  ///    user. The fields `email`, `phoneNumber`, and `credential`
+  ///    ([AuthCredential]) may be provided, depending on the type of
+  ///    credential. You can recover from this error by signing in with
+  ///    `credential` directly via [signInWithCredential].
+  /// - **email-already-in-use**:
+  ///  - Thrown if the email corresponding to the credential already exists
+  ///    among your users. When thrown while linking a credential to an existing
+  ///    user, an `email` and `credential` ([AuthCredential]) fields are also
+  ///    provided. You have to link the credential to the existing user with
+  ///    that email if you wish to continue signing in with that credential.
+  ///    To do so, call [fetchSignInMethodsForEmail], sign in to `email` via one
+  ///    of the providers returned and then [User.linkWithCredential] the
+  ///    original credential to that newly signed in user.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  /// - **invalid-verification-code**:
+  ///  - Thrown if the credential is a [PhoneAuthProvider.credential] and the
+  ///    verification code of the credential is not valid.
+  /// - **invalid-verification-id**:
+  ///  - Thrown if the credential is a [PhoneAuthProvider.credential] and the
+  ///    verification ID of the credential is not valid.
+  Future<UserCredentialPlatform> linkWithProvider(AuthProvider provider) {
+    throw UnimplementedError('linkWithProvider() is not implemented');
+  }
+
+  /// Renews the user’s authentication using the provided auth provider instance.
+  /// On Web you should use [linkWithPopup] instead.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  Future<UserCredentialPlatform> reauthenticateWithProvider(
+    AuthProvider provider,
+  ) {
+    throw UnimplementedError('reauthenticateWithProvider() is not implemented');
+  }
+
+  /// Renews the user’s authentication using the provided auth provider instance.
+  /// On mobile you should use [reauthenticateWithProvider] instead.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  Future<UserCredentialPlatform> reauthenticateWithPopup(
+    AuthProvider provider,
+  ) {
+    throw UnimplementedError('reauthenticateWithPopup() is not implemented');
+  }
+
+  /// Renews the user’s authentication using the provided auth provider instance.
+  /// On mobile you should use [reauthenticateWithProvider] instead.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  Future<void> reauthenticateWithRedirect(
+    AuthProvider provider,
+  ) {
+    throw UnimplementedError('reauthenticateWithRedirect() is not implemented');
+  }
+
+  /// Links the user account with the given provider.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **provider-already-linked**:
+  ///  - Thrown if the provider has already been linked to the user. This error
+  ///    is thrown even if this is not the same provider's account that is
+  ///    currently linked to the user.
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **credential-already-in-use**:
+  ///  - Thrown if the account corresponding to the credential already exists
+  ///    among your users, or is already linked to a Firebase User. For example,
+  ///    this error could be thrown if you are upgrading an anonymous user to a
+  ///    Google user by linking a Google credential to it and the Google
+  ///    credential used is already associated with an existing Firebase Google
+  ///    user. The fields `email`, `phoneNumber`, and `credential`
+  ///    ([AuthCredential]) may be provided, depending on the type of
+  ///    credential. You can recover from this error by signing in with
+  ///    `credential` directly via [signInWithCredential].
+  /// - **email-already-in-use**:
+  ///  - Thrown if the email corresponding to the credential already exists
+  ///    among your users. When thrown while linking a credential to an existing
+  ///    user, an `email` and `credential` ([AuthCredential]) fields are also
+  ///    provided. You have to link the credential to the existing user with
+  ///    that email if you wish to continue signing in with that credential.
+  ///    To do so, call [fetchSignInMethodsForEmail], sign in to `email` via one
+  ///    of the providers returned and then [User.linkWithCredential] the
+  ///    original credential to that newly signed in user.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  Future<UserCredentialPlatform> linkWithPopup(AuthProvider provider) {
+    throw UnimplementedError('linkWithPopup() is not implemented');
+  }
+
+  /// Links the user account with the given provider.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **provider-already-linked**:
+  ///  - Thrown if the provider has already been linked to the user. This error
+  ///    is thrown even if this is not the same provider's account that is
+  ///    currently linked to the user.
+  /// - **invalid-credential**:
+  ///  - Thrown if the provider's credential is not valid. This can happen if it
+  ///    has already expired when calling link, or if it used invalid token(s).
+  ///    See the Firebase documentation for your provider, and make sure you
+  ///    pass in the correct parameters to the credential method.
+  /// - **credential-already-in-use**:
+  ///  - Thrown if the account corresponding to the credential already exists
+  ///    among your users, or is already linked to a Firebase User. For example,
+  ///    this error could be thrown if you are upgrading an anonymous user to a
+  ///    Google user by linking a Google credential to it and the Google
+  ///    credential used is already associated with an existing Firebase Google
+  ///    user. The fields `email`, `phoneNumber`, and `credential`
+  ///    ([AuthCredential]) may be provided, depending on the type of
+  ///    credential. You can recover from this error by signing in with
+  ///    `credential` directly via [signInWithCredential].
+  /// - **email-already-in-use**:
+  ///  - Thrown if the email corresponding to the credential already exists
+  ///    among your users. When thrown while linking a credential to an existing
+  ///    user, an `email` and `credential` ([AuthCredential]) fields are also
+  ///    provided. You have to link the credential to the existing user with
+  ///    that email if you wish to continue signing in with that credential.
+  ///    To do so, call [fetchSignInMethodsForEmail], sign in to `email` via one
+  ///    of the providers returned and then [User.linkWithCredential] the
+  ///    original credential to that newly signed in user.
+  /// - **operation-not-allowed**:
+  ///  - Thrown if you have not enabled the provider in the Firebase Console. Go
+  ///    to the Firebase Console for your project, in the Auth section and the
+  ///    Sign in Method tab and configure the provider.
+  Future<void> linkWithRedirect(AuthProvider provider) {
+    throw UnimplementedError('linkWithRedirect() is not implemented');
   }
 
   /// Links the user account with the given phone number.
@@ -342,6 +532,18 @@ abstract class UserPlatform extends PlatformInterface {
   ///
   /// If you have a custom email action handler, you can complete the
   /// verification process by calling [applyActionCode].
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **missing-android-pkg-name**:
+  ///  - An Android package name must be provided if the Android app is required to be installed.
+  /// - **missing-continue-uri**:
+  ///  - A continue URL must be provided in the request.
+  /// - **missing-ios-bundle-id**:
+  ///  - An iOS bundle ID must be provided if an App Store ID is provided.
+  /// - **invalid-continue-uri**:
+  ///  - The continue URL provided in the request is invalid.
+  /// - **unauthorized-continue-uri**:
+  ///  - The domain of the continue URL is not whitelisted. Whitelist the domain in the Firebase console.
   Future<void> verifyBeforeUpdateEmail(
     String newEmail, [
     ActionCodeSettings? actionCodeSettings,

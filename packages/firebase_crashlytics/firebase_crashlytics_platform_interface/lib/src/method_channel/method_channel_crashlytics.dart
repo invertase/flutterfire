@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -7,8 +8,8 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 
-import '../platform_interface/platform_interface_crashlytics.dart';
 import './utils/exception.dart';
+import '../platform_interface/platform_interface_crashlytics.dart';
 
 /// The entry point for accessing a method channel based Crashlytics instance.
 ///
@@ -22,9 +23,6 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
   static MethodChannel channel = const MethodChannel(
     'plugins.flutter.io/firebase_crashlytics',
   );
-  // TODO: reinstate once analytics plugin is part of recording fatal error crashes.
-  // static MethodChannel _analyticsChannel =
-  //     const MethodChannel('plugins.flutter.io/firebase_analytics');
 
   bool? _isCrashlyticsCollectionEnabled;
 
@@ -55,7 +53,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
 
       return data!['unsentReports'];
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -64,7 +62,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
     try {
       await channel.invokeMethod<void>('Crashlytics#crash');
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -73,7 +71,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
     try {
       await channel.invokeMethod<void>('Crashlytics#deleteUnsentReports');
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -86,7 +84,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
 
       return data!['didCrashOnPreviousExecution'];
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -94,45 +92,25 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
   Future<void> recordError({
     required String exception,
     required String information,
-    required String reason,
+    required String? reason,
     bool fatal = false,
+    String? buildId,
+    List<String> loadingUnits = const [],
     List<Map<String, String>>? stackTraceElements,
   }) async {
     try {
-      /// "fatal" is an optional parameter that we're using to signal to the Crashlytic's service that this particular
-      /// error was a fatal one.  The below if statement is Firebase's prescribed method of signalling a fatal error.
-      if (fatal) {
-        try {
-          num currentUnixTimeSeconds =
-              (DateTime.now().millisecondsSinceEpoch / 1000).ceil();
-
-          await setCustomKey('com.firebase.crashlytics.flutter.fatal',
-              '$currentUnixTimeSeconds');
-
-          // TODO: once confirmation on the event name is received, reinstate analytics.logEvent below.
-          // await _analyticsChannel.invokeMethod('logEvent', <String, dynamic>{
-          //   'name': '_ae',
-          //   'parameters': {
-          //     'fatal': 1,
-          //     'timestamp': '$currentUnixTimeSeconds',
-          //   },
-          // });
-        } on MissingPluginException {
-          // noop - User ought to install firebase_analytics plugin
-        } on PlatformException catch (e, s) {
-          throw platformExceptionToFirebaseException(e, s);
-        }
-      }
-
       await channel
           .invokeMethod<void>('Crashlytics#recordError', <String, dynamic>{
         'exception': exception,
         'information': information,
         'reason': reason,
+        'fatal': fatal,
+        'buildId': buildId ?? '',
+        'loadingUnits': loadingUnits,
         'stackTraceElements': stackTraceElements ?? [],
       });
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -143,7 +121,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
         'message': message,
       });
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -152,7 +130,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
     try {
       await channel.invokeMethod<void>('Crashlytics#sendUnsentReports');
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -167,7 +145,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
 
       _isCrashlyticsCollectionEnabled = data!['isCrashlyticsCollectionEnabled'];
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -179,7 +157,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
         'identifier': identifier,
       });
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 
@@ -192,7 +170,7 @@ class MethodChannelFirebaseCrashlytics extends FirebaseCrashlyticsPlatform {
         'value': value,
       });
     } on PlatformException catch (e, s) {
-      throw platformExceptionToFirebaseException(e, s);
+      convertPlatformException(e, s);
     }
   }
 }

@@ -1,4 +1,8 @@
-// @dart=2.9
+// Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+// ignore_for_file: require_trailing_commas
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +17,7 @@ class Permissions extends StatefulWidget {
 class _Permissions extends State<Permissions> {
   bool _requested = false;
   bool _fetching = false;
-  NotificationSettings _settings;
+  late NotificationSettings _settings;
 
   Future<void> requestPermissions() async {
     setState(() {
@@ -34,13 +38,32 @@ class _Permissions extends State<Permissions> {
     });
   }
 
+  Future<void> checkPermissions() async {
+    setState(() {
+      _fetching = true;
+    });
+
+    NotificationSettings settings =
+        await FirebaseMessaging.instance.getNotificationSettings();
+
+    setState(() {
+      _requested = true;
+      _fetching = false;
+      _settings = settings;
+    });
+  }
+
   Widget row(String title, String value) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('$title:', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(
+            child: Text(
+              '$title:',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
           Text(value),
         ],
       ),
@@ -60,19 +83,21 @@ class _Permissions extends State<Permissions> {
     }
 
     return Column(children: [
-      row('Authorization Status', statusMap[_settings.authorizationStatus]),
+      row('Authorization Status', statusMap[_settings.authorizationStatus]!),
       if (defaultTargetPlatform == TargetPlatform.iOS) ...[
-        row('Alert', settingsMap[_settings.alert]),
-        row('Announcement', settingsMap[_settings.announcement]),
-        row('Badge', settingsMap[_settings.badge]),
-        row('Car Play', settingsMap[_settings.carPlay]),
-        row('Lock Screen', settingsMap[_settings.lockScreen]),
-        row('Notification Center', settingsMap[_settings.notificationCenter]),
-        row('Show Previews', previewMap[_settings.showPreviews]),
-        row('Sound', settingsMap[_settings.sound]),
+        row('Alert', settingsMap[_settings.alert]!),
+        row('Announcement', settingsMap[_settings.announcement]!),
+        row('Badge', settingsMap[_settings.badge]!),
+        row('Car Play', settingsMap[_settings.carPlay]!),
+        row('Lock Screen', settingsMap[_settings.lockScreen]!),
+        row('Notification Center', settingsMap[_settings.notificationCenter]!),
+        row('Show Previews', previewMap[_settings.showPreviews]!),
+        row('Sound', settingsMap[_settings.sound]!),
+        row('Provides App Notification Settings',
+            settingsMap[_settings.providesAppNotificationSettings]!),
       ],
       ElevatedButton(
-          onPressed: () => {}, child: const Text('Reload Permissions')),
+          onPressed: checkPermissions, child: const Text('Reload Permissions')),
     ]);
   }
 }

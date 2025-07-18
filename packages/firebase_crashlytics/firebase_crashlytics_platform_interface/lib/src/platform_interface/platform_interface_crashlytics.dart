@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -59,7 +60,7 @@ abstract class FirebaseCrashlyticsPlatform extends PlatformInterface {
 
   /// Sets the [FirebaseCrashlyticsPlatform.instance]
   static set instance(FirebaseCrashlyticsPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
@@ -88,7 +89,8 @@ abstract class FirebaseCrashlyticsPlatform extends PlatformInterface {
   /// This should only be used for testing purposes in cases where you wish to
   /// simulate a native crash to view the results on the Firebase Console.
   ///
-  /// Note: crash reports will not include a stack trace.
+  /// Note: crash reports will not include a stack trace and crash reports are
+  /// not sent until the next application startup.
   void crash() {
     throw UnimplementedError('crash() is not implemented');
   }
@@ -109,8 +111,10 @@ abstract class FirebaseCrashlyticsPlatform extends PlatformInterface {
   Future<void> recordError({
     required String exception,
     required String information,
-    required String reason,
+    required String? reason,
     bool fatal = false,
+    String? buildId,
+    List<String> loadingUnits = const [],
     List<Map<String, String>>? stackTraceElements,
   }) {
     throw UnimplementedError('recordError() is not implemented');

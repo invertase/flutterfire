@@ -1,15 +1,15 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
 
-import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:meta/meta.dart';
+import 'package:flutter/foundation.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-import '../persistence_settings.dart';
+import '../../cloud_firestore_platform_interface.dart';
 import '../method_channel/method_channel_firestore.dart';
 
 /// Defines an interface to work with Cloud Firestore on web and mobile
@@ -19,18 +19,30 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
   final FirebaseApp? appInstance;
 
   /// Create an instance using [app]
-  FirebaseFirestorePlatform({this.appInstance /*?*/}) : super(token: _token);
+  FirebaseFirestorePlatform({this.appInstance, this.databaseChoice})
+      : super(token: _token);
 
   /// Returns the [FirebaseApp] for the current instance.
   FirebaseApp get app {
     return appInstance ?? Firebase.app();
   }
 
+  final String? databaseChoice;
+
+  /// Firestore Database URL for this instance. Falls back to default database: "(default)"
+  String get databaseId {
+    return databaseChoice ?? '(default)';
+  }
+
   static final Object _token = Object();
 
   /// Create an instance using [app] using the existing implementation
-  factory FirebaseFirestorePlatform.instanceFor({required FirebaseApp app}) {
-    return FirebaseFirestorePlatform.instance.delegateFor(app: app);
+  factory FirebaseFirestorePlatform.instanceFor({
+    required FirebaseApp app,
+    required String databaseId,
+  }) {
+    return FirebaseFirestorePlatform.instance
+        .delegateFor(app: app, databaseId: databaseId);
   }
 
   /// The current default [FirebaseFirestorePlatform] instance.
@@ -38,22 +50,30 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
   /// It will always default to [MethodChannelFirebaseFirestore]
   /// if no other implementation was provided.
   static FirebaseFirestorePlatform get instance {
-    return _instance ??= MethodChannelFirebaseFirestore(app: Firebase.app());
+    return _instance ??= MethodChannelFirebaseFirestore(
+        app: Firebase.app(), databaseId: '(default)');
   }
 
   static FirebaseFirestorePlatform? _instance;
 
   /// Sets the [FirebaseFirestorePlatform.instance]
   static set instance(FirebaseFirestorePlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
   /// Enables delegates to create new instances of themselves if a none default
   /// [FirebaseApp] instance is required by the user.
   @protected
-  FirebaseFirestorePlatform delegateFor({required FirebaseApp app}) {
+  FirebaseFirestorePlatform delegateFor(
+      {required FirebaseApp app, required String databaseId}) {
     throw UnimplementedError('delegateFor() is not implemented');
+  }
+
+  /// useEmulator is used for web only. Native platforms use Firestore settings
+  /// to initialize emulator.
+  void useEmulator(String host, int port) {
+    throw UnimplementedError('useEmulator() is not implemented');
   }
 
   /// Creates a write batch, used for performing multiple writes as a single
@@ -65,12 +85,24 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
     throw UnimplementedError('batch() is not implemented');
   }
 
-  /// Clears any persisted data for the current instance.
+  /// Clears the persistent storage, including pending writes and cached documents.
+  ///
+  /// Must be called while the FirebaseFirestore instance is not started (after the app is shutdown or when the app is first initialized).
+  /// On startup, this method must be called before other methods (other than [FirebaseFirestore.instance.settings]).
+  /// If the FirebaseFirestore instance is still running, the Future will fail.
+  ///
+  /// Note: clearPersistence() is primarily intended to help write reliable tests that use Cloud Firestore.
+  /// It uses an efficient mechanism for dropping existing data but does not attempt to securely
+  /// overwrite or otherwise make cached data unrecoverable. For applications that are sensitive to
+  /// the disclosure of cached data in between user sessions, we strongly recommend not enabling persistence at all.
   Future<void> clearPersistence() {
     throw UnimplementedError('clearPersistence() is not implemented');
   }
 
-  /// Enable persistence of Firestore data. Web only.
+  /// Enable persistence of Firestore data for web-only. Use [Settings.persistenceEnabled] for non-web platforms.
+  /// If `enablePersistence()` is not called, it defaults to Memory cache.
+  /// If `enablePersistence(const PersistenceSettings(synchronizeTabs: false))` is called, it persists data for a single browser tab.
+  /// If `enablePersistence(const PersistenceSettings(synchronizeTabs: true))` is called, it persists data across multiple browser tabs.
   Future<void> enablePersistence(
       [PersistenceSettings? persistenceSettings]) async {
     throw UnimplementedError('enablePersistence() is not implemented');
@@ -105,10 +137,24 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
     throw UnimplementedError('enableNetwork() is not implemented');
   }
 
-  /// Returns a [Steam] which is called each time all of the active listeners
+  /// Returns a [Stream] which is called each time all of the active listeners
   /// have been synchronised.
   Stream<void> snapshotsInSync() {
     throw UnimplementedError('snapshotsInSync() is not implemented');
+  }
+
+  /// Loads a Firestore bundle into the local cache. Returns a [LoadBundleTask]
+  /// which notifies callers with progress updates, and completion or error events.
+  LoadBundleTaskPlatform loadBundle(Uint8List bundle) {
+    throw UnimplementedError('loadBundle() is not implemented');
+  }
+
+  /// Reads a Firestore Query which has been loaded using [loadBundle()]
+  Future<QuerySnapshotPlatform> namedQueryGet(
+    String name, {
+    GetOptions options = const GetOptions(),
+  }) {
+    throw UnimplementedError('namedQueryGet() is not implemented');
   }
 
   /// Executes the given [TransactionHandler] and then attempts to commit the
@@ -132,8 +178,11 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
   ///
   /// By default transactions are limited to 5 seconds of execution time. This
   /// timeout can be adjusted by setting the [timeout] parameter.
+  ///
+  /// By default transactions will retry 5 times. You can change the number of attempts
+  /// with [maxAttempts]. Attempts should be at least 1.
   Future<T?> runTransaction<T>(TransactionHandler<T> transactionHandler,
-      {Duration timeout = const Duration(seconds: 30)}) {
+      {Duration timeout = const Duration(seconds: 30), int maxAttempts = 5}) {
     throw UnimplementedError('runTransaction() is not implemented');
   }
 
@@ -179,6 +228,28 @@ abstract class FirebaseFirestorePlatform extends PlatformInterface {
   /// Any outstanding [waitForPendingWrites()] calls are rejected during user changes.
   Future<void> waitForPendingWrites() {
     throw UnimplementedError('waitForPendingWrites() is not implemented');
+  }
+
+  /// Configures indexing for local query execution. Any previous index configuration is overridden.
+  ///
+  /// The index entries themselves are created asynchronously. You can continue to use queries that
+  /// require indexing even if the indices are not yet available. Query execution will automatically
+  /// start using the index once the index entries have been written.
+  ///
+  /// This API is in preview mode and is subject to change.
+  Future<void> setIndexConfiguration(String indexConfiguration) {
+    throw UnimplementedError('setIndexConfiguration() is not implemented');
+  }
+
+  /// Gets the PersistentCacheIndexManager instance used by this firestore instance.
+  PersistentCacheIndexManagerPlatform? persistentCacheIndexManager() {
+    throw UnimplementedError(
+        'persistentCacheIndexManager() is not implemented');
+  }
+
+  /// Globally enables / disables Cloud Firestore logging for the SDK.
+  Future<void> setLoggingEnabled(bool enabled) {
+    throw UnimplementedError('setLoggingEnabled() is not implemented');
   }
 
   @override

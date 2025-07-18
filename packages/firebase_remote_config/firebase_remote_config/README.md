@@ -8,19 +8,16 @@ To learn more about Firebase Remote Config, please visit the [Firebase website](
 
 ## Getting Started
 
-To get started with Firebase Remote Config for Flutter, please [see the documentation](https://firebase.flutter.dev/docs/remote-config/overview) available
-at [https://firebase.flutter.dev](https://firebase.flutter.dev)
-
-## Usage
-
-To use this plugin, please visit the [Firebase Remote Config Usage documentation](https://firebase.flutter.dev/docs/remote-config/usage)
+To get started with Firebase Remote Config for Flutter, please
+see the [Flutter specific documentation](https://firebase.google.com/docs/remote-config/get-started?platform=flutter) available at
+[https://firebase.google.com/](https://firebase.google.com/).
 
 ## Issues and feedback
 
-Please file FlutterFire specific issues, bugs, or feature requests in our [issue tracker](https://github.com/FirebaseExtended/flutterfire/issues/new).
+Please file FlutterFire specific issues, bugs, or feature requests in our [issue tracker](https://github.com/firebase/flutterfire/issues/new).
 
 Plugin issues that are not specific to FlutterFire can be filed in the [Flutter issue tracker](https://github.com/flutter/flutter/issues/new).
 
 To contribute a change to this plugin,
-please review our [contribution guide](https://github.com/FirebaseExtended/flutterfire/blob/master/CONTRIBUTING.md)
-and open a [pull request](https://github.com/FirebaseExtended/flutterfire/pulls).
+please review our [contribution guide](https://github.com/firebase/flutterfire/blob/main/CONTRIBUTING.md)
+and open a [pull request](https://github.com/firebase/flutterfire/pulls).

@@ -1,14 +1,15 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_auth;
+part of '../firebase_auth.dart';
 
 /// A UserCredential is returned from authentication requests such as
 /// [createUserWithEmailAndPassword].
 class UserCredential {
   UserCredential._(this._auth, this._delegate) {
-    UserCredentialPlatform.verifyExtends(_delegate);
+    UserCredentialPlatform.verify(_delegate);
   }
 
   final FirebaseAuth _auth;

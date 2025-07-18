@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -15,17 +16,20 @@ void main() {
   const String kMockEmail = 'test@example.com';
 
   const String kMockPhoneNumber = TEST_PHONE_NUMBER;
-  const Map<String, String?> kMockData = <String, String?>{
+
+  const Map<String, Object?> kMockData = <String, Object?>{
     'providerId': kMockProviderId,
     'uid': kMockUid,
     'displayName': kMockDisplayName,
-    'photoURL': kMockPhotoURL,
+    'photoUrl': kMockPhotoURL,
     'email': kMockEmail,
-    'phoneNumber': kMockPhoneNumber
+    'phoneNumber': kMockPhoneNumber,
+    'isAnonymous': false,
+    'isEmailVerified': false,
   };
 
   group('$UserInfo', () {
-    final userInfo = UserInfo(kMockData);
+    final userInfo = UserInfo.fromJson(kMockData);
     group('Constructor', () {
       test('returns an instance of [UserInfo]', () {
         expect(userInfo, isA<UserInfo>());

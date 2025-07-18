@@ -1,8 +1,10 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
+
 import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:meta/meta.dart';
@@ -23,6 +25,22 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   @protected
   final FirebaseApp? appInstance;
 
+  /// The current Auth instance's tenant ID.
+  ///
+  /// When you set the tenant ID of an Auth instance, all future sign-in/sign-up
+  /// operations will pass this tenant ID and sign in or sign up users to the
+  /// specified tenant project. When set to null, users are signed in to the
+  /// parent project. By default, this is set to `null`.
+  String? tenantId;
+
+  /// Set the current Auth instance's auth domain for apple and android platforms.
+  /// The auth domain used to handle redirects from OAuth provides, for example
+  /// "my-awesome-app.firebaseapp.com". By default, this is set to `null` and
+  /// default auth domain is used.
+  ///
+  /// If not `null`, this value will supersede `authDomain` property set in `initializeApp`.
+  String? customAuthDomain;
+
   /// Create an instance using [app]
   FirebaseAuthPlatform({this.appInstance}) : super(token: _token);
 
@@ -42,11 +60,18 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
     required FirebaseApp app,
     required Map<dynamic, dynamic> pluginConstants,
   }) {
+    var currentUser = pluginConstants['APP_CURRENT_USER'];
+
+    if (currentUser != null) {
+      currentUser as List<Object?>;
+      final firstElement = PigeonUserInfo.decode(currentUser[0]!);
+      final secondElement = currentUser[1]!;
+      currentUser = PigeonUserDetails.decode([firstElement, secondElement]);
+    }
     return FirebaseAuthPlatform.instance.delegateFor(app: app).setInitialValues(
-        languageCode: pluginConstants['APP_LANGUAGE_CODE'],
-        currentUser: pluginConstants['APP_CURRENT_USER'] == null
-            ? null
-            : Map<String, dynamic>.from(pluginConstants['APP_CURRENT_USER']));
+          languageCode: pluginConstants['APP_LANGUAGE_CODE'],
+          currentUser: currentUser,
+        );
   }
 
   /// The current default [FirebaseAuthPlatform] instance.
@@ -62,12 +87,14 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
 
   /// Sets the [FirebaseAuthPlatform.instance]
   static set instance(FirebaseAuthPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
   /// Enables delegates to create new instances of themselves if a none default
   /// [FirebaseApp] instance is required by the user.
+  ///
+  /// Setting a [persistence] type is only available on web based platforms.
   @protected
   FirebaseAuthPlatform delegateFor({required FirebaseApp app}) {
     throw UnimplementedError('delegateFor() is not implemented');
@@ -80,7 +107,7 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   /// calls.
   @protected
   FirebaseAuthPlatform setInitialValues({
-    Map<String, dynamic>? currentUser,
+    PigeonUserDetails? currentUser,
     String? languageCode,
   }) {
     throw UnimplementedError('setInitialValues() is not implemented');
@@ -115,13 +142,13 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
 
   /// Changes this instance to point to an Auth emulator running locally.
   ///
-  /// Set the [host] and [port] of the local emulator, such as "http://localhost"
+  /// Set the [host] and [port] of the local emulator, such as "localhost"
   /// with port 9099
   ///
   /// Note: Must be called immediately, prior to accessing auth methods.
   /// Do not use with production credentials as emulator traffic is not encrypted.
-  Future<void> useEmulator(String host, int port) {
-    throw UnimplementedError('useEmulator() is not implemented');
+  Future<void> useAuthEmulator(String host, int port) {
+    throw UnimplementedError('useAuthEmulator() is not implemented');
   }
 
   /// Applies a verification code sent to the user by email or other out-of-band
@@ -201,6 +228,19 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   ///    email/password accounts in the Firebase Console, under the Auth tab.
   /// - **weak-password**:
   ///  - Thrown if the password is not strong enough.
+  /// - **too-many-requests**:
+  ///  - Thrown if the user sent too many requests at the same time, for security
+  ///     the api will not allow too many attempts at the same time, user will have
+  ///     to wait for some time
+  /// - **user-token-expired**:
+  ///  - Thrown if the user is no longer authenticated since his refresh token
+  ///    has been expired
+  /// - **network-request-failed**:
+  ///  - Thrown if there was a network request error, for example the user
+  ///    doesn't have internet connection
+  /// - **operation-not-allowed**:
+  ///  - Thrown if email/password accounts are not enabled. Enable
+  ///    email/password accounts in the Firebase Console, under the Auth tab.
   Future<UserCredentialPlatform> createUserWithEmailAndPassword(
     String email,
     String password,
@@ -309,13 +349,13 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   /// On web platforms, if `null` is provided as the [languageCode] the Firebase
   /// project default language will be used. On native platforms, the device
   /// language will be used.
-  Future<void> setLanguageCode(String languageCode) {
+  Future<void> setLanguageCode(String? languageCode) {
     throw UnimplementedError('setLanguageCode() is not implemented');
   }
 
   /// Updates the current instance with the provided settings.
   ///
-  /// [appVerificationDisabledForTesting] This setting only applies to iOS and
+  /// [appVerificationDisabledForTesting] This setting applies to Android, iOS and
   ///   web platforms. When set to `true`, this property disables app
   ///   verification for the purpose of testing phone authentication. For this
   ///   property to take effect, it needs to be set before handling a reCAPTCHA
@@ -329,6 +369,18 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   ///
   ///   The default value is `false` (app verification is enabled).
   ///
+  /// [forceRecaptchaFlow] This setting applies to Android only. When set to 'true',
+  ///   it forces the application verification to use the web reCAPTCHA flow for Phone Authentication.
+  ///   Once this has been called, every call to PhoneAuthProvider#verifyPhoneNumber() will skip the SafetyNet verification flow and use the reCAPTCHA flow instead.
+  ///   Calling this method a second time will overwrite the previously passed parameter.
+  ///
+  /// [phoneNumber] & [smsCode] These settings apply to Android only. The phone number and SMS code here must have been configured in the Firebase Console (Authentication > Sign In Method > Phone).
+  ///   Once this has been called, every call to PhoneAuthProvider#verifyPhoneNumber() with the same phone number as the one that is configured here will have onVerificationCompleted() triggered as the callback.
+  ///   Calling this method a second time will overwrite the previously passed parameters. Only one number can be configured at a given time.
+  ///   Calling this method with either parameter set to null removes this functionality until valid parameters are passed.
+  ///   Verifying a phone number other than the one configured here will trigger normal behavior. If the phone number is configured as a test phone number in the console, the regular testing flow occurs. Otherwise, normal phone number verification will take place.
+  ///   When this is set and PhoneAuthProvider#verifyPhoneNumber() is called with a matching phone number, PhoneAuthProvider.OnVerificationStateChangedCallbacks.onCodeAutoRetrievalTimeOut(String) will never be called.
+  ///
   /// [userAccessGroup] This setting only applies to iOS and MacOS platforms.
   ///   When set, it allows you to share authentication state between
   ///   applications. Set the property to your team group ID or set to `null`
@@ -338,8 +390,11 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   ///   settings > Capabilities). To learn more, visit the
   ///   [Apple documentation](https://developer.apple.com/documentation/security/keychain_services/keychain_items/sharing_access_to_keychain_items_among_a_collection_of_apps).
   Future<void> setSettings({
-    bool? appVerificationDisabledForTesting,
+    bool appVerificationDisabledForTesting = false,
     String? userAccessGroup,
+    String? phoneNumber,
+    String? smsCode,
+    bool? forceRecaptchaFlow,
   }) {
     throw UnimplementedError('setSettings() is not implemented');
   }
@@ -421,7 +476,7 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   ///    verification code of the credential is not valid.
   /// - **invalid-verification-id**:
   ///  - Thrown if the credential is a [PhoneAuthProvider.credential] and the
-  ///    verification ID of the credential is not valid.id.
+  ///    verification ID of the credential is not valid.
   Future<UserCredentialPlatform> signInWithCredential(
     AuthCredential credential,
   ) async {
@@ -464,6 +519,24 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   /// - **wrong-password**:
   ///  - Thrown if the password is invalid for the given email, or the account
   ///    corresponding to the email does not have a password set.
+  /// - **too-many-requests**:
+  ///  - Thrown if the user sent too many requests at the same time, for security
+  ///     the api will not allow too many attempts at the same time, user will have
+  ///     to wait for some time
+  /// - **user-token-expired**:
+  ///  - Thrown if the user is no longer authenticated since his refresh token
+  ///    has been expired
+  /// - **network-request-failed**:
+  ///  - Thrown if there was a network request error, for example the user
+  ///    doesn't have internet connection
+  /// - **INVALID_LOGIN_CREDENTIALS** or **invalid-credential**:
+  ///  - Thrown if the password is invalid for the given email, or the account
+  ///    corresponding to the email does not have a password set.
+  ///    Depending on if you are using firebase emulator or not the code is
+  ///    different
+  /// - **operation-not-allowed**:
+  ///  - Thrown if email/password accounts are not enabled. Enable
+  ///    email/password accounts in the Firebase Console, under the Auth tab.
   Future<UserCredentialPlatform> signInWithEmailAndPassword(
     String email,
     String password,
@@ -478,6 +551,7 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   ///
   /// Confirm the link is a sign-in email link before calling this method,
   /// using [isSignInWithEmailLink].
+
   ///
   /// A [FirebaseAuthException] maybe thrown with the following error code:
   /// - **expired-action-code**:
@@ -493,10 +567,21 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
     throw UnimplementedError('signInWithEmailLink() is not implemented');
   }
 
+  /// Signs in with an AuthProvider using native authentication flow.
+  ///
+  /// A [FirebaseAuthException] maybe thrown with the following error code:
+  /// - **user-disabled**:
+  ///  - Thrown if the user corresponding to the given email has been disabled.
+  Future<UserCredentialPlatform> signInWithProvider(
+    AuthProvider provider,
+  ) async {
+    throw UnimplementedError('signInWithProvider() is not implemented');
+  }
+
   /// Starts a sign-in flow for a phone number.
   ///
   /// You can optionally provide a [RecaptchaVerifier] instance to control the
-  /// reCAPTCHA widget apperance and behaviour.
+  /// reCAPTCHA widget appearance and behavior.
   ///
   /// Once the reCAPTCHA verification has completed, called [ConfirmationResult.confirm]
   /// with the users SMS verification code to complete the authentication flow.
@@ -600,16 +685,31 @@ abstract class FirebaseAuthPlatform extends PlatformInterface {
   /// [codeAutoRetrievalTimeout] Triggered when SMS auto-retrieval times out and
   ///   provide a [verificationId].
   Future<void> verifyPhoneNumber({
-    required String phoneNumber,
+    String? phoneNumber,
+    PhoneMultiFactorInfo? multiFactorInfo,
     required PhoneVerificationCompleted verificationCompleted,
     required PhoneVerificationFailed verificationFailed,
     required PhoneCodeSent codeSent,
     required PhoneCodeAutoRetrievalTimeout codeAutoRetrievalTimeout,
     Duration timeout = const Duration(seconds: 30),
     int? forceResendingToken,
+    MultiFactorSession? multiFactorSession,
     // ignore: invalid_use_of_visible_for_testing_member
     @visibleForTesting String? autoRetrievedSmsCodeForTesting,
   }) {
     throw UnimplementedError('verifyPhoneNumber() is not implemented');
+  }
+
+  /// Apple only. Users signed in with Apple provider can revoke their token using an authorization code.
+  /// Authorization code can be retrieved on the user credential i.e. userCredential.additionalUserInfo.authorizationCode
+  Future<void> revokeTokenWithAuthorizationCode(String authorizationCode) {
+    throw UnimplementedError(
+        'revokeTokenWithAuthorizationCode() is not implemented');
+  }
+
+  /// Initializes the reCAPTCHA Enterprise client proactively to enhance reCAPTCHA signal collection and
+  /// to complete reCAPTCHA-protected flows in a single attempt.
+  Future<void> initializeRecaptchaConfig() {
+    throw UnimplementedError('initializeRecaptchaConfig() is not implemented');
   }
 }

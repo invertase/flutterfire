@@ -1,39 +1,42 @@
 // Copyright 2019 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-// ignore_for_file: public_member_api_docs
-
-// @dart=2.9
 
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key key}) : super(key: key);
+  const MyApp({Key? key}) : super(key: key);
 
   String get name => 'foo';
 
-  FirebaseOptions get firebaseOptions => const FirebaseOptions(
-        appId: '1:448618578101:ios:0b650370bb29e29cac3efc',
-        apiKey: 'AIzaSyAgUhHU8wSJgO5MVNy95tMT07NEjzMOfz0',
-        projectId: 'react-native-firebase-testing',
-        messagingSenderId: '448618578101',
-      );
-
   Future<void> initializeDefault() async {
-    FirebaseApp app = await Firebase.initializeApp();
-    assert(app != null);
+    FirebaseApp app = await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     print('Initialized default app $app');
   }
 
-  Future<void> initializeSecondary() async {
-    FirebaseApp app =
-        await Firebase.initializeApp(name: name, options: firebaseOptions);
+  Future<void> initializeDefaultFromAndroidResource() async {
+    if (defaultTargetPlatform != TargetPlatform.android || kIsWeb) {
+      print('Not running on Android, skipping');
+      return;
+    }
+    FirebaseApp app = await Firebase.initializeApp();
+    print('Initialized default app $app from Android resource');
+  }
 
-    assert(app != null);
+  Future<void> initializeSecondary() async {
+    FirebaseApp app = await Firebase.initializeApp(
+      name: name,
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
     print('Initialized $app');
   }
 
@@ -43,14 +46,14 @@ class MyApp extends StatelessWidget {
   }
 
   void options() {
-    final FirebaseApp app = Firebase.app(name);
-    final FirebaseOptions options = app?.options;
-    print('Current options for app $name: $options');
+    final FirebaseApp app = Firebase.app();
+    final options = app.options;
+    print('Current options for app ${app.name}: $options');
   }
 
   Future<void> delete() async {
     final FirebaseApp app = Firebase.app(name);
-    await app?.delete();
+    await app.delete();
     print('App $name deleted');
   }
 
@@ -68,16 +71,32 @@ class MyApp extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               ElevatedButton(
-                  onPressed: initializeDefault,
-                  child: const Text('Initialize default app')),
+                onPressed: initializeDefault,
+                child: const Text('Initialize default app'),
+              ),
+              if (defaultTargetPlatform == TargetPlatform.android && !kIsWeb)
+                ElevatedButton(
+                  onPressed: initializeDefaultFromAndroidResource,
+                  child: const Text(
+                    'Initialize default app from Android resources',
+                  ),
+                ),
               ElevatedButton(
-                  onPressed: initializeSecondary,
-                  child: const Text('Initialize secondary app')),
-              ElevatedButton(onPressed: apps, child: const Text('Get apps')),
+                onPressed: initializeSecondary,
+                child: const Text('Initialize secondary app'),
+              ),
               ElevatedButton(
-                  onPressed: options, child: const Text('List options')),
+                onPressed: apps,
+                child: const Text('List apps'),
+              ),
               ElevatedButton(
-                  onPressed: delete, child: const Text('Delete app')),
+                onPressed: options,
+                child: const Text('List default options'),
+              ),
+              ElevatedButton(
+                onPressed: delete,
+                child: const Text('Delete secondary app'),
+              ),
             ],
           ),
         ),

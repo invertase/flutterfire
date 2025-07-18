@@ -1,14 +1,15 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:cloud_functions_platform_interface/cloud_functions_platform_interface.dart';
-import 'package:cloud_functions_platform_interface/src/https_callable_options.dart';
 import 'package:cloud_functions_platform_interface/src/method_channel/method_channel_firebase_functions.dart';
 import 'package:cloud_functions_platform_interface/src/method_channel/method_channel_https_callable.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:firebase_core/firebase_core.dart';
+
 import '../mock.dart';
 
 void main() {
@@ -55,6 +56,7 @@ void main() {
         kOrigin,
         kName,
         kOptions,
+        null,
       );
     });
 
@@ -86,6 +88,7 @@ void main() {
         expect(httpsCallable!.options, isInstanceOf<HttpsCallableOptions>());
         expect(httpsCallable!.options.timeout, isInstanceOf<Duration>());
         expect(httpsCallable!.options.timeout.inMinutes, 1);
+        expect(httpsCallable!.options.limitedUseAppCheckToken, false);
       });
     });
 
@@ -98,66 +101,6 @@ void main() {
     });
 
     group('call', () {
-      test('invokes native method with correct args', () async {
-        final result = await httpsCallable!.call(kParameters);
-
-        expect(result, isA<dynamic>());
-        expect(result['foo'], 'bar');
-
-        // check native method was called
-        expect(logger, <Matcher>[
-          isMethodCall(
-            'FirebaseFunctions#call',
-            arguments: <String, dynamic>{
-              'appName': functions!.app!.name,
-              'functionName': httpsCallable!.name,
-              'origin': httpsCallable!.origin,
-              'region': functions!.region,
-              'timeout': httpsCallable!.options.timeout.inMilliseconds,
-              'parameters': kParameters,
-            },
-          ),
-        ]);
-      });
-
-      test('accepts no args', () async {
-        await httpsCallable!.call();
-
-        // check native method was called
-        expect(logger, <Matcher>[
-          isMethodCall(
-            'FirebaseFunctions#call',
-            arguments: <String, dynamic>{
-              'appName': functions!.app!.name,
-              'functionName': httpsCallable!.name,
-              'origin': httpsCallable!.origin,
-              'region': functions!.region,
-              'timeout': httpsCallable!.options.timeout.inMilliseconds,
-              'parameters': null,
-            },
-          ),
-        ]);
-      });
-
-      test('accepts null', () async {
-        await httpsCallable!.call();
-
-        // check native method was called
-        expect(logger, <Matcher>[
-          isMethodCall(
-            'FirebaseFunctions#call',
-            arguments: <String, dynamic>{
-              'appName': functions!.app!.name,
-              'functionName': httpsCallable!.name,
-              'origin': httpsCallable!.origin,
-              'region': functions!.region,
-              'timeout': httpsCallable!.options.timeout.inMilliseconds,
-              'parameters': null,
-            },
-          ),
-        ]);
-      });
-
       test('catch an [Exception] error', () async {
         mockExceptionThrown = true;
         await testExceptionHandling('EXCEPTION', httpsCallable!.call);

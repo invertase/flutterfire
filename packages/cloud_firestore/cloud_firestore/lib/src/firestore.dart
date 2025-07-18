@@ -2,7 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of cloud_firestore;
+part of '../cloud_firestore.dart';
 
 /// The entry point for accessing a [FirebaseFirestore].
 ///
@@ -16,21 +16,14 @@ part of cloud_firestore;
 /// FirebaseFirestore firestore = FirebaseFirestore.instanceFor(app: secondaryApp);
 /// ```
 class FirebaseFirestore extends FirebasePluginPlatform {
-  // Cached and lazily loaded instance of [FirestorePlatform] to avoid
-  // creating a [MethodChannelFirestore] when not needed or creating an
-  // instance with the default app before a user specifies an app.
-  FirebaseFirestorePlatform? _delegatePackingProperty;
-
-  FirebaseFirestorePlatform get _delegate {
-    return _delegatePackingProperty ??=
-        FirebaseFirestorePlatform.instanceFor(app: app);
-  }
-
-  /// The [FirebaseApp] for this current [FirebaseFirestore] instance.
-  FirebaseApp app;
-
-  FirebaseFirestore._({required this.app})
-      : super(app.name, 'plugins.flutter.io/firebase_firestore');
+  FirebaseFirestore._({
+    required this.app,
+    @Deprecated(
+      '`databaseURL` has been deprecated. Please use `databaseId` instead.',
+    )
+    required this.databaseURL,
+    required this.databaseId,
+  }) : super(app.name, 'plugins.flutter.io/firebase_firestore');
 
   static final Map<String, FirebaseFirestore> _cachedInstances = {};
 
@@ -42,27 +35,70 @@ class FirebaseFirestore extends FirebasePluginPlatform {
   }
 
   /// Returns an instance using a specified [FirebaseApp].
-  static FirebaseFirestore instanceFor({required FirebaseApp app}) {
-    if (_cachedInstances.containsKey(app.name)) {
-      return _cachedInstances[app.name]!;
+  static FirebaseFirestore instanceFor({
+    required FirebaseApp app,
+    @Deprecated(
+      '`databaseURL` has been deprecated. Please use `databaseId` instead.',
+    )
+    String? databaseURL,
+    String? databaseId,
+  }) {
+    String firestoreDatabaseId = databaseId ?? databaseURL ?? '(default)';
+    String cacheKey = '${app.name}|$firestoreDatabaseId';
+    if (_cachedInstances.containsKey(cacheKey)) {
+      return _cachedInstances[cacheKey]!;
     }
 
-    FirebaseFirestore newInstance = FirebaseFirestore._(app: app);
-    _cachedInstances[app.name] = newInstance;
+    FirebaseFirestore newInstance =
+        // Both databaseURL and databaseId are required so we have to pass both for now. We can remove databaseURL in a future release.
+        FirebaseFirestore._(
+      app: app,
+      databaseURL: firestoreDatabaseId,
+      databaseId: firestoreDatabaseId,
+    );
+    _cachedInstances[cacheKey] = newInstance;
 
     return newInstance;
   }
 
-  /// Gets a [CollectionReference] for the specified Firestore path.
-  CollectionReference collection(String collectionPath) {
-    assert(collectionPath.isNotEmpty,
-        'a collectionPath path must be a non-empty string');
-    assert(!collectionPath.contains('//'),
-        'a collection path must not contain "//"');
-    assert(isValidCollectionPath(collectionPath),
-        'a collection path must point to a valid collection.');
+  // Cached and lazily loaded instance of [FirestorePlatform] to avoid
+  // creating a [MethodChannelFirestore] when not needed or creating an
+  // instance with the default app before a user specifies an app.
+  FirebaseFirestorePlatform? _delegatePackingProperty;
 
-    return CollectionReference._(this, _delegate.collection(collectionPath));
+  FirebaseFirestorePlatform get _delegate {
+    return _delegatePackingProperty ??= FirebaseFirestorePlatform.instanceFor(
+      app: app,
+      databaseId: databaseId,
+    );
+  }
+
+  /// The [FirebaseApp] for this current [FirebaseFirestore] instance.
+  FirebaseApp app;
+
+  /// Firestore Database ID for this instance. Falls back to default database: "(default)"
+  /// This is deprecated in favor of [databaseId].
+  @Deprecated(
+    '`databaseURL` has been deprecated. Please use `databaseId` instead.',
+  )
+  String databaseURL;
+
+  /// Firestore Database ID for this instance. Falls back to default database: "(default)"
+  String databaseId;
+
+  /// Gets a [CollectionReference] for the specified Firestore path.
+  CollectionReference<Map<String, dynamic>> collection(String collectionPath) {
+    if (collectionPath.isEmpty) {
+      throw ArgumentError('A collection path must be a non-empty string.');
+    } else if (collectionPath.contains('//')) {
+      throw ArgumentError('A collection path must not contain "//".');
+    } else if (!isValidCollectionPath(collectionPath)) {
+      throw ArgumentError(
+        'A collection path must point to a valid collection.',
+      );
+    }
+
+    return _JsonCollectionReference(this, _delegate.collection(collectionPath));
   }
 
   /// Returns a [WriteBatch], used for performing multiple writes as a single
@@ -74,27 +110,116 @@ class FirebaseFirestore extends FirebasePluginPlatform {
     return WriteBatch._(this, _delegate.batch());
   }
 
-  /// Clears any persisted data for the current instance.
+  /// Clears the persistent storage, including pending writes and cached documents.
+  ///
+  /// Must be called while the FirebaseFirestore instance is not started (after the app is shutdown or when the app is first initialized).
+  /// On startup, this method must be called before other methods (other than [FirebaseFirestore.instance.settings]).
+  /// If the FirebaseFirestore instance is still running, the Future will fail.
+  ///
+  /// Note: clearPersistence() is primarily intended to help write reliable tests that use Cloud Firestore.
+  /// It uses an efficient mechanism for dropping existing data but does not attempt to securely
+  /// overwrite or otherwise make cached data unrecoverable. For applications that are sensitive to
+  /// the disclosure of cached data in between user sessions, we strongly recommend not enabling persistence at all.
   Future<void> clearPersistence() {
     return _delegate.clearPersistence();
   }
 
-  /// Enable persistence of Firestore data.
-  ///
-  /// This is a web-only method. Use [Settings.persistenceEnabled] for non-web platforms.
-  Future<void> enablePersistence(
-      [PersistenceSettings? persistenceSettings]) async {
+  /// Enable persistence of Firestore data for web-only. Use [Settings.persistenceEnabled] for non-web platforms.
+  /// If `enablePersistence()` is not called, it defaults to Memory cache.
+  /// If `enablePersistence(const PersistenceSettings(synchronizeTabs: false))` is called, it persists data for a single browser tab.
+  /// If `enablePersistence(const PersistenceSettings(synchronizeTabs: true))` is called, it persists data across multiple browser tabs.
+  @Deprecated('Use Settings.persistenceEnabled instead.')
+  Future<void> enablePersistence([
+    PersistenceSettings? persistenceSettings,
+  ]) async {
     return _delegate.enablePersistence(persistenceSettings);
   }
 
-  /// Gets a [Query] for the specified collection group.
-  Query collectionGroup(String collectionPath) {
-    assert(collectionPath.isNotEmpty,
-        'a collection path must be a non-empty string');
-    assert(!collectionPath.contains('/'),
-        'a collection path passed to collectionGroup() cannot contain "/"');
+  LoadBundleTask loadBundle(Uint8List bundle) {
+    return LoadBundleTask._(_delegate.loadBundle(bundle));
+  }
 
-    return Query._(this, _delegate.collectionGroup(collectionPath));
+  /// Changes this instance to point to a FirebaseFirestore emulator running locally.
+  ///
+  /// Set the [host] of the local emulator, such as "localhost"
+  /// Set the [port] of the local emulator, such as "8080" (port 8080 is default)
+  ///
+  /// Note: Must be called immediately, prior to accessing FirebaseFirestore methods.
+  /// Do not use with production credentials as emulator traffic is not encrypted.
+  void useFirestoreEmulator(
+    String host,
+    int port, {
+    bool sslEnabled = false,
+    bool automaticHostMapping = true,
+  }) {
+    if (kIsWeb) {
+      // use useEmulator() API for web as settings are set immediately unlike native platforms
+      try {
+        _delegate.useEmulator(host, port);
+      } catch (e) {
+        // We convert to string to be compatible with Flutter <= 3.7 and Flutter >= 3.10
+        // .code is only available in Flutter <= 3.7
+        String strError = e.toString();
+
+        // this catches FirebaseError from web that occurs after hot reloading & hot restarting
+        if (!strError.contains('failed-precondition')) {
+          rethrow;
+        }
+      }
+    } else {
+      String mappedHost = host;
+      // Android considers localhost as 10.0.2.2 - automatically handle this for users.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        if ((mappedHost == 'localhost' || mappedHost == '127.0.0.1') &&
+            automaticHostMapping) {
+          // ignore: avoid_print
+          print('Mapping Firestore Emulator host "$mappedHost" to "10.0.2.2".');
+          mappedHost = '10.0.2.2';
+        }
+      }
+
+      _delegate.settings = _delegate.settings.copyWith(
+        // "sslEnabled" has to be set to false for android to work
+        sslEnabled: sslEnabled,
+        host: '$mappedHost:$port',
+      );
+    }
+  }
+
+  /// Performs a [namedQueryGet] and decode the result using [Query.withConverter].
+  Future<QuerySnapshot<T>> namedQueryWithConverterGet<T>(
+    String name, {
+    GetOptions options = const GetOptions(),
+    required FromFirestore<T> fromFirestore,
+    required ToFirestore<T> toFirestore,
+  }) async {
+    final snapshot = await namedQueryGet(name, options: options);
+
+    return _WithConverterQuerySnapshot<T>(snapshot, fromFirestore, toFirestore);
+  }
+
+  /// Reads a [QuerySnapshot] if a namedQuery has been retrieved and passed as a [Buffer] to [loadBundle()]. To read from cache, pass [GetOptions.source] value as [Source.cache].
+  /// To read from the Firestore backend, use [GetOptions.source] as [Source.server].
+  Future<QuerySnapshot<Map<String, dynamic>>> namedQueryGet(
+    String name, {
+    GetOptions options = const GetOptions(),
+  }) async {
+    QuerySnapshotPlatform snapshotDelegate =
+        await _delegate.namedQueryGet(name, options: options);
+    return _JsonQuerySnapshot(FirebaseFirestore.instance, snapshotDelegate);
+  }
+
+  /// Gets a [Query] for the specified collection group.
+  Query<Map<String, dynamic>> collectionGroup(String collectionPath) {
+    if (collectionPath.isEmpty) {
+      throw ArgumentError('A collection path must be a non-empty string.');
+    } else if (collectionPath.contains('/')) {
+      throw ArgumentError(
+        'A collection path passed to collectionGroup() cannot contain "/".',
+      );
+    }
+
+    return _JsonQuery(this, _delegate.collectionGroup(collectionPath));
   }
 
   /// Instructs [FirebaseFirestore] to disable the network for the instance.
@@ -107,15 +232,16 @@ class FirebaseFirestore extends FirebasePluginPlatform {
   }
 
   /// Gets a [DocumentReference] for the specified Firestore path.
-  DocumentReference doc(String documentPath) {
-    assert(
-        documentPath.isNotEmpty, 'a document path must be a non-empty string');
-    assert(!documentPath.contains('//'),
-        'a collection path must not contain "//"');
-    assert(isValidDocumentPath(documentPath),
-        'a document path must point to a valid document.');
+  DocumentReference<Map<String, dynamic>> doc(String documentPath) {
+    if (documentPath.isEmpty) {
+      throw ArgumentError('A document path must be a non-empty string.');
+    } else if (documentPath.contains('//')) {
+      throw ArgumentError('A document path must not contain "//".');
+    } else if (!isValidDocumentPath(documentPath)) {
+      throw ArgumentError('A document path must point to a valid document.');
+    }
 
-    return DocumentReference._(this, _delegate.doc(documentPath));
+    return _JsonDocumentReference(this, _delegate.doc(documentPath));
   }
 
   /// Enables the network for this instance. Any pending local-only writes
@@ -125,7 +251,7 @@ class FirebaseFirestore extends FirebasePluginPlatform {
   }
 
   /// Returns a [Stream] which is called each time all of the active listeners
-  /// have been synchronised.
+  /// have been synchronized.
   Stream<void> snapshotsInSync() {
     return _delegate.snapshotsInSync();
   }
@@ -149,14 +275,24 @@ class FirebaseFirestore extends FirebasePluginPlatform {
   /// reads are performed before any writes. Transactions must be performed
   /// while online. Otherwise, reads will fail, and the final commit will fail.
   ///
-  /// By default transactions are limited to 5 seconds of execution time. This
+  /// By default transactions are limited to 30 seconds of execution time. This
   /// timeout can be adjusted by setting the timeout parameter.
-  Future<T> runTransaction<T>(TransactionHandler<T> transactionHandler,
-      {Duration timeout = const Duration(seconds: 30)}) async {
+  ///
+  /// By default transactions will retry 5 times. You can change the number of attempts
+  /// with [maxAttempts]. Attempts should be at least 1.
+  Future<T> runTransaction<T>(
+    TransactionHandler<T> transactionHandler, {
+    Duration timeout = const Duration(seconds: 30),
+    int maxAttempts = 5,
+  }) async {
     late T output;
-    await _delegate.runTransaction((transaction) async {
-      output = await transactionHandler(Transaction._(this, transaction));
-    }, timeout: timeout);
+    await _delegate.runTransaction(
+      (transaction) async {
+        output = await transactionHandler(Transaction._(this, transaction));
+      },
+      timeout: timeout,
+      maxAttempts: maxAttempts,
+    );
 
     return output;
   }
@@ -165,7 +301,17 @@ class FirebaseFirestore extends FirebasePluginPlatform {
   ///
   /// You must set these before invoking any other methods on this [FirebaseFirestore] instance.
   set settings(Settings settings) {
-    _delegate.settings = settings;
+    _delegate.settings = _delegate.settings.copyWith(
+      sslEnabled: settings.sslEnabled,
+      persistenceEnabled: settings.persistenceEnabled,
+      host: settings.host,
+      cacheSizeBytes: settings.cacheSizeBytes,
+      webExperimentalForceLongPolling: settings.webExperimentalForceLongPolling,
+      webExperimentalAutoDetectLongPolling:
+          settings.webExperimentalAutoDetectLongPolling,
+      webExperimentalLongPollingOptions:
+          settings.webExperimentalLongPollingOptions,
+    );
   }
 
   /// The current [Settings] for this [FirebaseFirestore] instance.
@@ -205,6 +351,67 @@ class FirebaseFirestore extends FirebasePluginPlatform {
     return _delegate.waitForPendingWrites();
   }
 
+  /// Configures indexing for local query execution. Any previous index configuration is overridden.
+  ///
+  /// The index entries themselves are created asynchronously. You can continue to use queries that
+  /// require indexing even if the indices are not yet available. Query execution will automatically
+  /// start using the index once the index entries have been written.
+  ///
+  /// This API is now deprecated
+  @Deprecated(
+    'setIndexConfiguration() has been deprecated. Please use `PersistentCacheIndexManager` instead.',
+  )
+  Future<void> setIndexConfiguration({
+    required List<Index> indexes,
+    List<FieldOverrides>? fieldOverrides,
+  }) async {
+    String json = jsonEncode(
+      {
+        'indexes': indexes.map((index) => index.toMap()).toList(),
+        'fieldOverrides':
+            fieldOverrides?.map((index) => index.toMap()).toList() ?? [],
+      },
+    );
+
+    return _delegate.setIndexConfiguration(json);
+  }
+
+  PersistentCacheIndexManager? persistentCacheIndexManager() {
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      throw UnimplementedError(
+        '`PersistentCacheIndexManager` is not available on Windows platform',
+      );
+    }
+
+    PersistentCacheIndexManagerPlatform? indexManager =
+        _delegate.persistentCacheIndexManager();
+    if (indexManager != null) {
+      return PersistentCacheIndexManager._(
+        indexManager,
+      );
+    }
+    return null;
+  }
+
+  /// Configures indexing for local query execution. Any previous index configuration is overridden.
+  ///
+  /// The index entries themselves are created asynchronously. You can continue to use queries that
+  /// require indexing even if the indices are not yet available. Query execution will automatically
+  /// start using the index once the index entries have been written.
+  /// See Firebase documentation to learn how to configure your index configuration JSON file:
+  /// https://firebase.google.com/docs/reference/firestore/indexes
+  ///
+  /// This API is in preview mode and is subject to change.
+  @experimental
+  Future<void> setIndexConfigurationFromJSON(String json) async {
+    return _delegate.setIndexConfiguration(json);
+  }
+
+  /// Globally enables / disables Cloud Firestore logging for the SDK.
+  static Future<void> setLoggingEnabled(bool enabled) {
+    return FirebaseFirestorePlatform.instance.setLoggingEnabled(enabled);
+  }
+
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
   bool operator ==(Object other) =>
@@ -212,7 +419,7 @@ class FirebaseFirestore extends FirebasePluginPlatform {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => hashValues(app.name, app.options);
+  int get hashCode => Object.hash(app.name, app.options);
 
   @override
   String toString() => '$FirebaseFirestore(app: ${app.name})';

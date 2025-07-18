@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -27,6 +28,8 @@ class TaskWeb extends TaskPlatform {
 
   final storage_interop.UploadTask _task;
 
+  Stream<TaskSnapshotPlatform>? _stream;
+
   /// Returns a [Stream] of [TaskSnapshot] events.
   ///
   /// If the task is canceled or fails, the stream will send an error event.
@@ -36,7 +39,7 @@ class TaskWeb extends TaskPlatform {
   /// wait for the stream to complete via [onComplete].
   @override
   Stream<TaskSnapshotPlatform> get snapshotEvents {
-    return guard(() {
+    _stream ??= guard(() {
       // The mobile version of the plugin pushes a "success" snapshot to the
       // onStateChanged stream, but the Firebase JS SDK does *not*.
       // We use a StreamGroup + Future.asStream to simulate that feature:
@@ -45,16 +48,33 @@ class TaskWeb extends TaskPlatform {
 
       // This stream converts the UploadTask Snapshots from JS to the plugins'
       // It can also throw a FirebaseError internally, so we handle it.
-      final onStateChangedStream =
-          _task.onStateChanged.map<TaskSnapshotPlatform>((snapshot) {
+      final onStateChangedStream = _task
+          .onStateChanged(
+        _reference.storage.app.name,
+        _reference.bucket,
+        _reference.fullPath,
+      )
+          .map<TaskSnapshotPlatform>((snapshot) {
         return fbUploadTaskSnapshotToTaskSnapshot(_reference, snapshot);
       });
 
       group.add(onStateChangedStream);
-      group.add(onComplete.asStream());
+
+      onComplete.asStream().last.then((value) async {
+        // If successful, we add a final snapshot with the state "success"
+        await group.add(onComplete.asStream());
+        await group.close();
+      }).catchError((e) async {
+        // We don't care about the error here as it has already propagated via `guard()`
+        // We need to remove the onStateChangedStream from the group and close group for onDone callback to be called
+        await group.remove(onStateChangedStream);
+        await group.close();
+      });
 
       return group.stream;
     });
+
+    return _stream!;
   }
 
   /// Returns a [Future] once the task has completed.
@@ -90,8 +110,7 @@ class TaskWeb extends TaskPlatform {
     final paused = _task.pause();
     // Wait until the snapshot is paused, then return the value of paused...
     return snapshotEvents
-        .takeWhile((snapshot) => snapshot.state != TaskState.paused)
-        .last
+        .firstWhere((snapshot) => snapshot.state == TaskState.paused)
         .then<bool>((_) => paused);
   }
 

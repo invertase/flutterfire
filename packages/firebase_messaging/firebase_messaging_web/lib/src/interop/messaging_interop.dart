@@ -1,49 +1,104 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 // ignore_for_file: public_member_api_docs
 
-@JS('firebase.messaging')
-library firebase_interop.messaging;
+@JS('firebase_messaging')
+library;
 
-import 'package:js/js.dart';
+import 'dart:js_interop';
+
 import 'package:firebase_core_web/firebase_core_web_interop.dart';
 
+@JS()
+@staticInterop
+external MessagingJsImpl getMessaging([AppJsImpl? app]);
+
+@JS()
+@staticInterop
+external JSPromise<JSBoolean> deleteToken(MessagingJsImpl messaging);
+
+@JS()
+@staticInterop
+external JSPromise<JSString> getToken(
+    MessagingJsImpl messaging, GetTokenOptions? getTokenOptions);
+
 @JS('isSupported')
-external bool isSupported();
+@staticInterop
+external JSPromise<JSBoolean> isSupported();
+
+@JS()
+@staticInterop
+external JSFunction onMessage(
+  MessagingJsImpl messaging,
+  Observer observer,
+);
 
 @JS('Messaging')
-abstract class MessagingJsImpl {
-  external void deleteToken();
-  external PromiseJsImpl<String> getToken(dynamic getTokenOptions);
-  external void Function() onMessage(
-    dynamic optionsOrObserverOrOnNext,
-    dynamic observerOrOnNextOrOnError,
-  );
+@staticInterop
+abstract class MessagingJsImpl {}
+
+@JS()
+@staticInterop
+@anonymous
+class Observer {
+  external factory Observer({JSAny next, JSAny error});
+}
+
+extension ObserverJsImplX on Observer {
+  external JSAny get next;
+  external JSAny get error;
 }
 
 @JS()
+@staticInterop
 @anonymous
-abstract class NotificationPayloadJsImpl {
-  external String? get title;
-  external String? get body;
-  external String? get image;
+class GetTokenOptions {
+  // TODO - I imagine we won't be implementing serviceWorkerRegistration type as it extends EventTarget class
+  // external String get serviceWorkerRegistration
+  external factory GetTokenOptions({
+    JSString? vapidKey,
+    /*dynamic serviceWorkerRegistration */
+  });
+}
+
+extension GetTokenOptionsJsImplX on GetTokenOptions {
+  external JSString get vapidKey;
 }
 
 @JS()
+@staticInterop
 @anonymous
-abstract class MessagePayloadJsImpl {
-  external String? get collapseKey;
+abstract class NotificationPayloadJsImpl {}
+
+extension NotificationPayloadJsImplX on NotificationPayloadJsImpl {
+  external JSString? get title;
+  external JSString? get body;
+  external JSString? get image;
+}
+
+@JS()
+@staticInterop
+@anonymous
+abstract class MessagePayloadJsImpl {}
+
+extension MessagePayloadJsImplX on MessagePayloadJsImpl {
+  external JSString get messageId;
+  external JSString? get collapseKey;
   external FcmOptionsJsImpl? get fcmOptions;
   external NotificationPayloadJsImpl? get notification;
-  external dynamic /*Map<String, String>*/ get data;
-  external String? get from;
+  external JSObject? get data;
+  external JSString? get from;
 }
 
 @JS()
+@staticInterop
 @anonymous
-abstract class FcmOptionsJsImpl {
-  external String? get analyticsLabel;
-  external String? get link;
+abstract class FcmOptionsJsImpl {}
+
+extension FcmOptionsJsImplX on FcmOptionsJsImpl {
+  external JSString? get analyticsLabel;
+  external JSString? get link;
 }

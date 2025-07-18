@@ -16,13 +16,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+@FunctionalInterface
+interface ErrorCallback {
+  void onError(String errorDescription);
+}
+
 class FlutterFirebaseMessagingUtils {
   static final String IS_AUTO_INIT_ENABLED = "isAutoInitEnabled";
   static final String SHARED_PREFERENCES_KEY = "io.flutter.firebase.messaging.callback";
-  static final String ACTION_REMOTE_MESSAGE = "io.flutter.plugins.firebase.messaging.NOTIFICATION";
   static final String EXTRA_REMOTE_MESSAGE = "notification";
-  static final String ACTION_TOKEN = "io.flutter.plugins.firebase.messaging.TOKEN";
-  static final String EXTRA_TOKEN = "token";
   static final int JOB_ID = 2020;
   private static final String KEY_COLLAPSE_KEY = "collapseKey";
   private static final String KEY_DATA = "data";
@@ -33,6 +35,9 @@ class FlutterFirebaseMessagingUtils {
   private static final String KEY_TO = "to";
   private static final String KEY_TTL = "ttl";
 
+  // We are using a deprecated method 'getTo' which is not being replaced by any other method.
+  // Keeping this method for backward compatibility.
+  @SuppressWarnings("deprecation")
   static Map<String, Object> remoteMessageToMap(RemoteMessage remoteMessage) {
     Map<String, Object> messageMap = new HashMap<>();
     Map<String, Object> dataMap = new HashMap<>();
@@ -57,7 +62,7 @@ class FlutterFirebaseMessagingUtils {
       messageMap.put(KEY_MESSAGE_TYPE, remoteMessage.getMessageType());
     }
 
-    if (remoteMessage.getData().size() > 0) {
+    if (!remoteMessage.getData().isEmpty()) {
       Set<Map.Entry<String, String>> entries = remoteMessage.getData().entrySet();
       for (Map.Entry<String, String> entry : entries) {
         dataMap.put(entry.getKey(), entry.getValue());
@@ -242,5 +247,27 @@ class FlutterFirebaseMessagingUtils {
     }
 
     return builder.build();
+  }
+
+  /**
+   * Returns the notification associated to a RemoteMessage map.
+   *
+   * @param arguments Method channel call arguments.
+   * @return RemoteMessage
+   */
+  static Map<String, Object> getRemoteMessageNotificationForArguments(
+      Map<String, Object> arguments) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> messageMap =
+        (Map<String, Object>) Objects.requireNonNull(arguments.get("message"));
+
+    if (messageMap.get("notification") == null) {
+      return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    Map<String, Object> notification = (Map<String, Object>) messageMap.get("notification");
+
+    return notification;
   }
 }

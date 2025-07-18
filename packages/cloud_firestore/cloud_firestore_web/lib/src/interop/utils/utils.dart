@@ -1,67 +1,116 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:firebase_core_web/firebase_core_web_interop.dart'
-    as core_interop;
-import 'package:js/js.dart';
-import 'package:js/js_util.dart' as util;
+import 'dart:js_interop';
+
+import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 
 import '../firestore.dart';
-import '../firestore_interop.dart' hide FieldValue;
 
 /// Returns Dart representation from JS Object.
-dynamic dartify(Object? jsObject) {
-  return core_interop.dartify(jsObject, (Object? object) {
-    if (util.instanceof(object, DocumentReferenceJsConstructor)) {
-      return DocumentReference.getInstance(object! as DocumentReferenceJsImpl);
-    }
-    if (util.instanceof(object, GeoPointConstructor)) {
-      return object;
-    }
-    if (util.instanceof(object, TimestampJsConstructor)) {
-      return DateTime.fromMillisecondsSinceEpoch(
-          (object! as TimestampJsImpl).toMillis());
-    }
-    if (util.instanceof(object, BlobConstructor)) {
-      return object! as Blob;
-    }
-    return null;
-  });
+dynamic dartify(dynamic object) {
+  // Convert JSObject to Dart equivalents directly
+  // Cannot be done with Dart 3.2 constraints
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (object is! JSObject) {
+    return object;
+  }
+
+  final jsObject = object;
+
+  if (jsObject.instanceof(DocumentReferenceJsConstructor as JSFunction)) {
+    return DocumentReference.getInstance(jsObject as DocumentReferenceJsImpl);
+  }
+  if (jsObject.instanceof(GeoPointConstructor as JSFunction)) {
+    return jsObject;
+  }
+  if (jsObject.instanceof(VectorValueConstructor as JSFunction)) {
+    return jsObject;
+  }
+  if (jsObject.instanceof(TimestampJsConstructor as JSFunction)) {
+    final castedJSObject = jsObject as TimestampJsImpl;
+    return Timestamp(
+        castedJSObject.seconds.toDartInt, castedJSObject.nanoseconds.toDartInt);
+  }
+  if (jsObject.instanceof(BytesConstructor as JSFunction)) {
+    return jsObject as BytesJsImpl;
+  }
+
+  // Convert nested structures
+  final dartObject = jsObject.dartify();
+  return convertNested(dartObject);
+}
+
+dynamic convertNested(dynamic object) {
+  if (object is List) {
+    return object.map(convertNested).toList();
+  } else if (object is Map) {
+    var map = <String, dynamic>{};
+    object.forEach((key, value) {
+      map[key] = convertNested(value);
+    });
+    return map;
+  } else {
+    // For non-nested types, attempt to convert directly
+    return dartify(object);
+  }
 }
 
 /// Returns the JS implementation from Dart Object.
-dynamic jsify(Object? dartObject) {
+JSAny? jsify(Object? dartObject) {
   if (dartObject == null) {
-    return null;
+    return dartObject?.jsify();
   }
 
-  return core_interop.jsify(dartObject, (Object? object) {
-    if (object is DateTime) {
-      return TimestampJsImpl.fromMillis(object.millisecondsSinceEpoch);
-    }
+  if (dartObject is List) {
+    return dartObject.map(jsify).toList().toJS;
+  }
 
-    if (object is DocumentReference) {
-      return object.jsObject;
-    }
+  if (dartObject is Map) {
+    return dartObject.map((key, value) => MapEntry(key, jsify(value))).jsify();
+  }
 
-    if (object is FieldValue) {
-      return jsifyFieldValue(object);
-    }
+  if (dartObject is DateTime) {
+    return TimestampJsImpl.fromMillis(dartObject.millisecondsSinceEpoch.toJS)
+        as JSAny;
+  }
 
-    if (object is Blob) {
-      return object;
-    }
+  if (dartObject is Timestamp) {
+    return TimestampJsImpl.fromMillis(dartObject.millisecondsSinceEpoch.toJS)
+        as JSAny;
+  }
 
-    // NOTE: if the firestore JS lib is not imported, we'll get a DDC warning here
-    if (object is GeoPoint) {
-      return dartObject;
-    }
+  if (dartObject is DocumentReference) {
+    return dartObject.jsObject as JSAny;
+  }
 
-    if (object is Function) {
-      return allowInterop(object);
-    }
+  if (dartObject is FieldValue) {
+    return jsifyFieldValue(dartObject);
+  }
 
-    return null;
-  });
+  // Cannot be done with Dart 3.2 constraints
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (dartObject is BytesJsImpl) {
+    return dartObject as JSAny;
+  }
+
+  // Cannot be done with Dart 3.2 constraints
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (dartObject is GeoPointJsImpl) {
+    return dartObject as JSAny;
+  }
+
+  // Cannot be done with Dart 3.2 constraints
+  // ignore: invalid_runtime_check_with_js_interop_types
+  if (dartObject is VectorValueJsImpl) {
+    return dartObject as JSAny;
+  }
+
+  if (dartObject is JSAny Function()) {
+    return dartObject.toJS;
+  }
+
+  return dartObject.jsify();
 }

@@ -1,13 +1,12 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:ui' show hashValues;
-
 import 'package:collection/collection.dart';
+import 'package:flutter/foundation.dart' show immutable;
 
-import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
-import 'package:flutter/material.dart';
+import '../platform_interface/platform_interface_field_value.dart';
 
 /// Sentinel values that can be used when writing document fields with set() or
 /// update().
@@ -50,5 +49,5 @@ class MethodChannelFieldValue {
       const DeepCollectionEquality().equals(other.value, value);
 
   @override
-  int get hashCode => hashValues(type, value);
+  int get hashCode => Object.hash(type, value);
 }

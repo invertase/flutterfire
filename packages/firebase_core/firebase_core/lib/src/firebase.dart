@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_core;
+part of '../firebase_core.dart';
 
 /// The entry point for accessing Firebase.
 class Firebase {
@@ -24,20 +25,44 @@ class Firebase {
 
   /// Returns a list of all [FirebaseApp] instances that have been created.
   static List<FirebaseApp> get apps {
-    return _delegate.apps
-        .map((app) => FirebaseApp._(app))
-        .toList(growable: false);
+    return _delegate.apps.map(FirebaseApp._).toList(growable: false);
   }
 
   /// Initializes a new [FirebaseApp] instance by [name] and [options] and returns
   /// the created app. This method should be called before any usage of FlutterFire plugins.
   ///
-  /// The default app instance cannot be initialized here and should be created
-  /// using the platform Firebase integration.
+  /// The default app instance can be initialized here simply by passing no "name" as an argument
+  /// in both Dart & manual initialization flows.
+  /// If you have a `google-services.json` file in your android project or a `GoogleService-Info.plist` file in your iOS+ project,
+  /// it will automatically create a default (named "[DEFAULT]") app instance on the native platform. However, you will still need to call this method
+  /// before using any FlutterFire plugins.
   static Future<FirebaseApp> initializeApp({
     String? name,
     FirebaseOptions? options,
+    String? demoProjectId,
   }) async {
+    if (demoProjectId != null) {
+      late final String platformString;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        platformString = 'android';
+      } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        platformString = 'ios';
+      } else {
+        // We use 'web' as the default platform for unknown platforms.
+        platformString = 'web';
+      }
+      FirebaseAppPlatform app = await _delegate.initializeApp(
+        options: FirebaseOptions(
+          apiKey: '',
+          appId: '1:1:$platformString:1',
+          messagingSenderId: '',
+          projectId: demoProjectId,
+        ),
+      );
+
+      return FirebaseApp._(app);
+    }
     FirebaseAppPlatform app = await _delegate.initializeApp(
       name: name,
       options: options,

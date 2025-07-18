@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -30,7 +31,7 @@ void main() {
       expect(t.nanoseconds, equals(456));
     });
 
-    // https://github.com/FirebaseExtended/flutterfire/issues/1222
+    // https://github.com/firebase/flutterfire/issues/1222
     test('does not exceed range', () {
       Timestamp maxTimestamp = Timestamp(_kEndOfTime - 1, _kBillion - 1);
       Timestamp.fromMicrosecondsSinceEpoch(maxTimestamp.microsecondsSinceEpoch);
@@ -78,6 +79,35 @@ void main() {
       int epoch = t.millisecondsSinceEpoch;
 
       expect(epoch, equals(-9999999999));
+    });
+
+    test('Timestamp should not throw for dates before 1970', () {
+      final dates = [
+        DateTime(1969, 06, 22, 0, 0, 0, 123),
+        DateTime(1969, 12, 31, 23, 59, 59, 999),
+        DateTime(1900, 01, 01, 12, 30, 45, 500),
+        DateTime(1800, 07, 04, 18, 15, 30, 250),
+        DateTime(0001, 01, 01, 00, 00, 00, 001),
+      ];
+
+      for (final date in dates) {
+        try {
+          final timestamp = Timestamp.fromDate(date);
+          expect(timestamp, isA<Timestamp>());
+        } catch (e) {
+          fail('Timestamp.fromDate threw an error: $e');
+        }
+      }
+    });
+
+    test(
+        'pre-1970 Timestamps should match the original DateTime after conversion',
+        () {
+      final date = DateTime(1969, 06, 22, 0, 0, 0, 123);
+      final timestamp = Timestamp.fromDate(date);
+      final timestampAsDateTime = timestamp.toDate();
+
+      expect(date, equals(timestampAsDateTime));
     });
   });
 }

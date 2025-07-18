@@ -15,15 +15,15 @@ else
   end
 end
 
-# TODO(Salakar): Remove deployment target check once default Flutter osx minimum updated to 10.12.
 begin
+  required_macos_version = "10.12"
   current_target_definition = Pod::Config.instance.podfile.send(:current_target_definition)
   user_osx_target = current_target_definition.to_hash["platform"]["osx"]
-  if user_osx_target == "10.11"
-    error_message = "The FlutterFire plugin #{pubspec['name']} for macOS requires a macOS deployment target of 10.12 or later."
+  if (Gem::Version.new(user_osx_target) < Gem::Version.new(required_macos_version))
+    error_message = "The FlutterFire plugin #{pubspec['name']} for macOS requires a macOS deployment target of #{required_macos_version} or later."
     Pod::UI.warn error_message, [
-      "Update the `platform :osx, '10.11'` line in your macOS/Podfile to version `10.12` and ensure you commit this file.",
-      "Open your `macos/Runner.xcodeproj` Xcode project and under the 'Runner' target General tab set your Deployment Target to 10.12 or later."
+      "Update the `platform :osx, '#{user_osx_target}'` line in your macOS/Podfile to version `#{required_macos_version}` and ensure you commit this file.",
+      "Open your `macos/Runner.xcodeproj` Xcode project and under the 'Runner' target General tab set your Deployment Target to #{required_macos_version} or later."
     ]
     raise Pod::Informative, error_message
   end
@@ -43,10 +43,10 @@ Pod::Spec.new do |s|
   s.authors          = 'The Chromium Authors'
   s.source           = { :path => '.' }
 
-  s.source_files     = 'Classes/**/*.{h,m}'
-  s.public_header_files = 'Classes/*.h'
+  s.source_files     = 'firebase_storage/Sources/firebase_storage/**/*.{h,m}'
+  s.public_header_files = 'firebase_storage/Sources/firebase_storage/include/*.h'
 
-  s.platform = :osx, '10.12'
+  s.platform = :osx, '10.13'
 
   # Flutter dependencies
   s.dependency 'FlutterMacOS'
@@ -58,7 +58,7 @@ Pod::Spec.new do |s|
 
   s.static_framework = true
   s.pod_target_xcconfig = {
-    'GCC_PREPROCESSOR_DEFINITIONS' => "LIBRARY_VERSION=\\@\\\"#{library_version}\\\" LIBRARY_NAME=\\@\\\"flutter-fire-gcs\\\"",
+    'GCC_PREPROCESSOR_DEFINITIONS' => "LIBRARY_VERSION=\\\"#{library_version}\\\" LIBRARY_NAME=\\\"flutter-fire-gcs\\\"",
     'DEFINES_MODULE' => 'YES'
   }
 end

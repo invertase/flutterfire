@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -131,57 +132,69 @@ void main() {
           criticalAlert: anyNamed('criticalAlert'),
           provisional: anyNamed('provisional'),
           sound: anyNamed('sound'),
-        )).thenAnswer((_) => Future.value(androidNotificationSettings));
+          providesAppNotificationSettings:
+              anyNamed('providesAppNotificationSettings'),
+        )).thenAnswer((_) => Future.value(defaultNotificationSettings));
 
         // true values
         await messaging!.requestPermission(
-            alert: true,
-            announcement: true,
-            badge: true,
-            carPlay: true,
-            criticalAlert: true,
-            provisional: true,
-            sound: true);
+          alert: true,
+          announcement: true,
+          badge: true,
+          carPlay: true,
+          criticalAlert: true,
+          provisional: true,
+          sound: true,
+          providesAppNotificationSettings: true,
+        );
 
         verify(kMockMessagingPlatform.requestPermission(
-            alert: true,
-            announcement: true,
-            badge: true,
-            carPlay: true,
-            criticalAlert: true,
-            provisional: true,
-            sound: true));
+          alert: true,
+          announcement: true,
+          badge: true,
+          carPlay: true,
+          criticalAlert: true,
+          provisional: true,
+          sound: true,
+          providesAppNotificationSettings: true,
+        ));
 
         // false values
         await messaging!.requestPermission(
-            alert: false,
-            announcement: false,
-            badge: false,
-            carPlay: false,
-            criticalAlert: false,
-            provisional: false,
-            sound: false);
+          alert: false,
+          announcement: false,
+          badge: false,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: false,
+          providesAppNotificationSettings: false,
+        );
 
         verify(kMockMessagingPlatform.requestPermission(
-            alert: false,
-            announcement: false,
-            badge: false,
-            carPlay: false,
-            criticalAlert: false,
-            provisional: false,
-            sound: false));
+          alert: false,
+          announcement: false,
+          badge: false,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: false,
+          providesAppNotificationSettings: false,
+        ));
 
         // default values
         await messaging!.requestPermission();
 
         verify(kMockMessagingPlatform.requestPermission(
-            alert: true,
-            announcement: false,
-            badge: true,
-            carPlay: false,
-            criticalAlert: false,
-            provisional: false,
-            sound: true));
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+          providesAppNotificationSettings: false,
+        ));
       });
     });
 

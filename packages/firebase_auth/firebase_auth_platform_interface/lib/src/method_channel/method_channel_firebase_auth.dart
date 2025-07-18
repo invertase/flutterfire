@@ -1,17 +1,19 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2019 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
 
+import 'package:_flutterfire_internals/_flutterfire_internals.dart';
+import 'package:firebase_auth_platform_interface/src/method_channel/method_channel_multi_factor.dart';
+import 'package:firebase_auth_platform_interface/src/method_channel/utils/convert_auth_provider.dart';
+import 'package:firebase_auth_platform_interface/src/pigeon/messages.pigeon.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../firebase_auth_platform_interface.dart';
-import '../firebase_auth_exception.dart';
-import '../platform_interface/platform_interface_user_credential.dart';
 import 'method_channel_user.dart';
 import 'method_channel_user_credential.dart';
 import 'utils/exception.dart';
@@ -23,9 +25,15 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     'plugins.flutter.io/firebase_auth',
   );
 
+  final _api = FirebaseAuthHostApi();
+
+  /// Map of [MethodChannelFirebaseAuth] that can be get with Firebase App Name.
   static Map<String, MethodChannelFirebaseAuth>
-      _methodChannelFirebaseAuthInstances =
+      methodChannelFirebaseAuthInstances =
       <String, MethodChannelFirebaseAuth>{};
+
+  static Map<String, MethodChannelMultiFactor> _multiFactorInstances =
+      <String, MethodChannelMultiFactor>{};
 
   static final Map<String, StreamController<_ValueWrapper<UserPlatform>>>
       _authStateChangesListeners =
@@ -49,6 +57,14 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     return MethodChannelFirebaseAuth._();
   }
 
+  AuthPigeonFirebaseApp get pigeonDefault {
+    return AuthPigeonFirebaseApp(
+      appName: app.name,
+      tenantId: tenantId,
+      customAuthDomain: customAuthDomain,
+    );
+  }
+
   /// Internal stub class initializer.
   ///
   /// When the user code calls an auth method, the real instance is
@@ -58,22 +74,22 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
   /// Creates a new instance with a given [FirebaseApp].
   MethodChannelFirebaseAuth({required FirebaseApp app})
       : super(appInstance: app) {
-    channel.invokeMethod<String>('Auth#registerIdTokenListener', {
-      'appName': app.name,
-    }).then((channelName) {
-      final events = EventChannel(channelName!, channel.codec);
-      events.receiveBroadcastStream().listen(
+    _api.registerIdTokenListener(pigeonDefault).then((channelName) {
+      final events = EventChannel(channelName, channel.codec);
+      events
+          .receiveGuardedBroadcastStream(onError: convertPlatformException)
+          .listen(
         (arguments) {
           _handleIdTokenChangesListener(app.name, arguments);
         },
       );
     });
 
-    channel.invokeMethod<String>('Auth#registerAuthStateListener', {
-      'appName': app.name,
-    }).then((channelName) {
-      final events = EventChannel(channelName!, channel.codec);
-      events.receiveBroadcastStream().listen(
+    _api.registerAuthStateListener(pigeonDefault).then((channelName) {
+      final events = EventChannel(channelName, channel.codec);
+      events
+          .receiveGuardedBroadcastStream(onError: convertPlatformException)
+          .listen(
         (arguments) {
           _handleAuthStateChangesListener(app.name, arguments);
         },
@@ -110,17 +126,28 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     // ignore: close_sinks
     final streamController = _authStateChangesListeners[appName]!;
     MethodChannelFirebaseAuth instance =
-        _methodChannelFirebaseAuthInstances[appName]!;
+        methodChannelFirebaseAuthInstances[appName]!;
 
-    final userMap = arguments['user'];
-    if (userMap == null) {
+    MethodChannelMultiFactor? multiFactorInstance =
+        _multiFactorInstances[appName];
+    if (multiFactorInstance == null) {
+      multiFactorInstance = MethodChannelMultiFactor(instance);
+      _multiFactorInstances[appName] = multiFactorInstance;
+    }
+
+    final userList = arguments['user'];
+    if (userList == null) {
       instance.currentUser = null;
       streamController.add(const _ValueWrapper.absent());
     } else {
-      final MethodChannelUser user =
-          MethodChannelUser(instance, userMap.cast<String, dynamic>());
+      final MethodChannelUser user = MethodChannelUser(
+        instance,
+        multiFactorInstance,
+        PigeonUserDetails.decode(
+          [PigeonUserInfo.decode(userList[0]!), userList[1]],
+        ),
+      );
 
-      // TODO(rousselGit): should this logic be moved to the setter instead?
       instance.currentUser = user;
       streamController.add(_ValueWrapper(instance.currentUser));
     }
@@ -139,18 +166,28 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
         // ignore: close_sinks
         userChangesStreamController = _userChangesListeners[appName]!;
     MethodChannelFirebaseAuth instance =
-        _methodChannelFirebaseAuthInstances[appName]!;
+        methodChannelFirebaseAuthInstances[appName]!;
+    MethodChannelMultiFactor? multiFactorInstance =
+        _multiFactorInstances[appName];
+    if (multiFactorInstance == null) {
+      multiFactorInstance = MethodChannelMultiFactor(instance);
+      _multiFactorInstances[appName] = multiFactorInstance;
+    }
 
-    final userMap = arguments['user'];
-    if (userMap == null) {
+    final userList = arguments['user'];
+    if (userList == null) {
       instance.currentUser = null;
       idTokenStreamController.add(const _ValueWrapper.absent());
       userChangesStreamController.add(const _ValueWrapper.absent());
     } else {
-      final MethodChannelUser user =
-          MethodChannelUser(instance, userMap.cast<String, dynamic>());
+      final MethodChannelUser user = MethodChannelUser(
+        instance,
+        multiFactorInstance,
+        PigeonUserDetails.decode(
+          [PigeonUserInfo.decode(userList[0]!), userList[1]],
+        ),
+      );
 
-      // TODO(rousselGit): should this logic be moved to the setter instead?
       instance.currentUser = user;
       idTokenStreamController.add(_ValueWrapper(user));
       userChangesStreamController.add(_ValueWrapper(user));
@@ -163,18 +200,19 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
   /// Instances are cached and reused for incoming event handlers.
   @override
   FirebaseAuthPlatform delegateFor({required FirebaseApp app}) {
-    return _methodChannelFirebaseAuthInstances.putIfAbsent(app.name, () {
+    return methodChannelFirebaseAuthInstances.putIfAbsent(app.name, () {
       return MethodChannelFirebaseAuth(app: app);
     });
   }
 
   @override
   MethodChannelFirebaseAuth setInitialValues({
-    Map<String, dynamic>? currentUser,
+    PigeonUserDetails? currentUser,
     String? languageCode,
   }) {
     if (currentUser != null) {
-      this.currentUser = MethodChannelUser(this, currentUser);
+      final multiFactor = MethodChannelMultiFactor(this);
+      this.currentUser = MethodChannelUser(this, multiFactor, currentUser);
     }
 
     this.languageCode = languageCode;
@@ -182,61 +220,46 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
   }
 
   @override
-  Future<void> useEmulator(String host, int port) async {
+  Future<void> useAuthEmulator(String host, int port) async {
     try {
-      await channel.invokeMethod<void>('Auth#useEmulator', <String, dynamic>{
-        'appName': app.name,
-        'host': host,
-        'port': port,
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.useEmulator(pigeonDefault, host, port);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> applyActionCode(String code) async {
     try {
-      await channel
-          .invokeMethod<void>('Auth#applyActionCode', <String, dynamic>{
-        'appName': app.name,
-        'code': code,
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.applyActionCode(pigeonDefault, code);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<ActionCodeInfo> checkActionCode(String code) async {
     try {
-      Map<String, dynamic> result = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#checkActionCode', <String, dynamic>{
-        'appName': app.name,
-        'code': code,
-      }))!;
+      final result = await _api.checkActionCode(pigeonDefault, code);
 
       return ActionCodeInfo(
-        operation: result['operation'],
-        data: Map<String, dynamic>.from(result['data']),
+        operation: result.operation,
+        data: ActionCodeInfoData(
+          email: result.data.email,
+          previousEmail: result.data.previousEmail,
+        ),
       );
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> confirmPasswordReset(String code, String newPassword) async {
     try {
-      await channel
-          .invokeMethod<void>('Auth#confirmPasswordReset', <String, dynamic>{
-        'appName': app.name,
-        'code': code,
-        'newPassword': newPassword,
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.confirmPasswordReset(pigeonDefault, code, newPassword);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -244,37 +267,178 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
   Future<UserCredentialPlatform> createUserWithEmailAndPassword(
       String email, String password) async {
     try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#createUserWithEmailAndPassword', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-        'password': password,
-      }))!;
-
+      final result = await _api.createUserWithEmailAndPassword(
+        pigeonDefault,
+        email,
+        password,
+      );
       MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
+          MethodChannelUserCredential(this, result);
 
       currentUser = userCredential.user;
       return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInAnonymously() async {
+    try {
+      final result = await _api.signInAnonymously(pigeonDefault);
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithCredential(
+    AuthCredential credential,
+  ) async {
+    try {
+      final result = await _api.signInWithCredential(
+        pigeonDefault,
+        credential.asMap(),
+      );
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithCustomToken(String token) async {
+    try {
+      final result = await _api.signInWithCustomToken(
+        pigeonDefault,
+        token,
+      );
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      final result = await _api.signInWithEmailAndPassword(
+        pigeonDefault,
+        email,
+        password,
+      );
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithEmailLink(
+      String email, String emailLink) async {
+    try {
+      final result = await _api.signInWithEmailLink(
+        pigeonDefault,
+        email,
+        emailLink,
+      );
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithProvider(
+    AuthProvider provider,
+  ) async {
+    try {
+      // To extract scopes and custom parameters from the provider
+      final convertedProvider = convertToOAuthProvider(provider);
+
+      final result = await _api.signInWithProvider(
+        pigeonDefault,
+        PigeonSignInProvider(
+          providerId: convertedProvider.providerId,
+          scopes: convertedProvider is OAuthProvider
+              ? convertedProvider.scopes
+              : null,
+          customParameters: convertedProvider is OAuthProvider
+              ? convertedProvider.parameters
+              : null,
+        ),
+      );
+
+      MethodChannelUserCredential userCredential =
+          MethodChannelUserCredential(this, result);
+
+      currentUser = userCredential.user;
+      return userCredential;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<UserCredentialPlatform> signInWithPopup(AuthProvider provider) {
+    throw UnimplementedError(
+      'signInWithPopup() is only supported on web based platforms',
+    );
+  }
+
+  @override
+  Future<void> signInWithRedirect(AuthProvider provider) {
+    throw UnimplementedError(
+      'signInWithRedirect() is only supported on web based platforms',
+    );
+  }
+
+  @override
+  Future<void> signOut() async {
+    try {
+      await _api.signOut(pigeonDefault);
+
+      currentUser = null;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<List<String>> fetchSignInMethodsForEmail(String email) async {
     try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#fetchSignInMethodsForEmail', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-      }))!;
+      final data = await _api.fetchSignInMethodsForEmail(pigeonDefault, email);
 
-      return List<String>.from(data['providers']);
-    } catch (e) {
-      throw convertPlatformException(e);
+      return data.nonNulls.toList();
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -306,14 +470,25 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     ActionCodeSettings? actionCodeSettings,
   ]) async {
     try {
-      await channel
-          .invokeMethod<void>('Auth#sendPasswordResetEmail', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-        'actionCodeSettings': actionCodeSettings?.asMap(),
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.sendPasswordResetEmail(
+        pigeonDefault,
+        email,
+        actionCodeSettings == null
+            ? null
+            : PigeonActionCodeSettings(
+                url: actionCodeSettings.url,
+                handleCodeInApp: actionCodeSettings.handleCodeInApp,
+                iOSBundleId: actionCodeSettings.iOSBundleId,
+                androidPackageName: actionCodeSettings.androidPackageName,
+                androidInstallApp: actionCodeSettings.androidInstallApp,
+                androidMinimumVersion: actionCodeSettings.androidMinimumVersion,
+                // ignore: deprecated_member_use_from_same_package
+                dynamicLinkDomain: actionCodeSettings.dynamicLinkDomain,
+                linkDomain: actionCodeSettings.linkDomain,
+              ),
+      );
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
@@ -323,206 +498,91 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     ActionCodeSettings actionCodeSettings,
   ) async {
     try {
-      await channel
-          .invokeMethod<void>('Auth#sendSignInLinkToEmail', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-        'actionCodeSettings': actionCodeSettings.asMap(),
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.sendSignInLinkToEmail(
+        pigeonDefault,
+        email,
+        PigeonActionCodeSettings(
+          url: actionCodeSettings.url,
+          handleCodeInApp: actionCodeSettings.handleCodeInApp,
+          iOSBundleId: actionCodeSettings.iOSBundleId,
+          linkDomain: actionCodeSettings.linkDomain,
+          androidPackageName: actionCodeSettings.androidPackageName,
+          androidInstallApp: actionCodeSettings.androidInstallApp,
+          androidMinimumVersion: actionCodeSettings.androidMinimumVersion,
+          // ignore: deprecated_member_use_from_same_package
+          dynamicLinkDomain: actionCodeSettings.dynamicLinkDomain,
+        ),
+      );
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
-  Future<void> setLanguageCode(String languageCode) async {
+  Future<void> setLanguageCode(String? languageCode) async {
     try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#setLanguageCode', <String, dynamic>{
-        'appName': app.name,
-        'languageCode': languageCode,
-      }))!;
+      final newLanguageCode =
+          await _api.setLanguageCode(pigeonDefault, languageCode);
 
-      this.languageCode = data['languageCode'];
-    } catch (e) {
-      throw convertPlatformException(e);
+      this.languageCode = newLanguageCode;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> setSettings({
-    bool? appVerificationDisabledForTesting,
+    bool appVerificationDisabledForTesting = false,
     String? userAccessGroup,
+    String? phoneNumber,
+    String? smsCode,
+    bool? forceRecaptchaFlow,
   }) async {
+    if (phoneNumber != null && smsCode == null ||
+        phoneNumber == null && smsCode != null) {
+      throw ArgumentError(
+        "The [smsCode] and the [phoneNumber] must both be either 'null' or a 'String''.",
+      );
+    }
+
     try {
-      await channel.invokeMethod('Auth#setSettings', <String, dynamic>{
-        'appName': app.name,
-        'appVerificationDisabledForTesting': appVerificationDisabledForTesting,
-        'userAccessGroup': userAccessGroup,
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
+      await _api.setSettings(
+          pigeonDefault,
+          PigeonFirebaseAuthSettings(
+            appVerificationDisabledForTesting:
+                appVerificationDisabledForTesting,
+            userAccessGroup: userAccessGroup,
+            phoneNumber: phoneNumber,
+            smsCode: smsCode,
+            forceRecaptchaFlow: forceRecaptchaFlow,
+          ));
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> setPersistence(Persistence persistence) {
     throw UnimplementedError(
-        'setPersistence() is only supported on web based platforms');
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInAnonymously() async {
-    try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#signInAnonymously', <String, dynamic>{
-        'appName': app.name,
-      }))!;
-
-      MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
-
-      currentUser = userCredential.user;
-      return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInWithCredential(
-    AuthCredential credential,
-  ) async {
-    try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#signInWithCredential', <String, dynamic>{
-        'appName': app.name,
-        'credential': credential.asMap(),
-      }))!;
-
-      MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
-
-      currentUser = userCredential.user;
-      return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInWithCustomToken(String token) async {
-    try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#signInWithCustomToken', <String, dynamic>{
-        'appName': app.name,
-        'token': token,
-      }))!;
-
-      MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
-
-      currentUser = userCredential.user;
-      return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInWithEmailAndPassword(
-      String email, String password) async {
-    try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#signInWithEmailAndPassword', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-        'password': password,
-      }))!;
-
-      MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
-
-      currentUser = userCredential.user;
-      return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInWithEmailLink(
-      String email, String emailLink) async {
-    try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#signInWithEmailLink', <String, dynamic>{
-        'appName': app.name,
-        'email': email,
-        'emailLink': emailLink,
-      }))!;
-
-      MethodChannelUserCredential userCredential =
-          MethodChannelUserCredential(this, data);
-
-      currentUser = userCredential.user;
-      return userCredential;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
-  }
-
-  @override
-  Future<UserCredentialPlatform> signInWithPopup(AuthProvider provider) {
-    throw UnimplementedError(
-      'signInWithPopup() is only supported on web based platforms',
+      'setPersistence() is only supported on web based platforms',
     );
-  }
-
-  @override
-  Future<void> signInWithRedirect(AuthProvider provider) {
-    throw UnimplementedError(
-      'signInWithRedirect() is only supported on web based platforms',
-    );
-  }
-
-  @override
-  Future<void> signOut() async {
-    try {
-      await channel.invokeMethod<void>('Auth#signOut', <String, dynamic>{
-        'appName': app.name,
-      });
-
-      currentUser = null;
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
   }
 
   @override
   Future<String> verifyPasswordResetCode(String code) async {
     try {
-      Map<String, dynamic> data = (await channel
-          .invokeMapMethod<String, dynamic>(
-              'Auth#verifyPasswordResetCode', <String, dynamic>{
-        'appName': app.name,
-        'code': code,
-      }))!;
+      final userEmail = await _api.verifyPasswordResetCode(pigeonDefault, code);
 
-      return data['email'];
-    } catch (e) {
-      throw convertPlatformException(e);
+      return userEmail;
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 
   @override
   Future<void> verifyPhoneNumber({
-    required String phoneNumber,
+    String? phoneNumber,
+    MultiFactorInfo? multiFactorInfo,
     required PhoneVerificationCompleted verificationCompleted,
     required PhoneVerificationFailed verificationFailed,
     required PhoneCodeSent codeSent,
@@ -530,6 +590,7 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     String? autoRetrievedSmsCodeForTesting,
     Duration timeout = const Duration(seconds: 30),
     int? forceResendingToken,
+    MultiFactorSession? multiFactorSession,
   }) async {
     if (defaultTargetPlatform == TargetPlatform.macOS) {
       throw UnimplementedError(
@@ -538,17 +599,20 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
     }
 
     try {
-      final eventChannelName = await channel
-          .invokeMethod<String>('Auth#verifyPhoneNumber', <String, dynamic>{
-        'appName': app.name,
-        'phoneNumber': phoneNumber,
-        'timeout': timeout.inMilliseconds,
-        'forceResendingToken': forceResendingToken,
-        'autoRetrievedSmsCodeForTesting': autoRetrievedSmsCodeForTesting,
-      });
+      final eventChannelName = await _api.verifyPhoneNumber(
+        pigeonDefault,
+        PigeonVerifyPhoneNumberRequest(
+          phoneNumber: phoneNumber,
+          multiFactorInfoId: multiFactorInfo?.uid,
+          timeout: timeout.inMilliseconds,
+          forceResendingToken: forceResendingToken,
+          autoRetrievedSmsCodeForTesting: autoRetrievedSmsCodeForTesting,
+          multiFactorSessionId: multiFactorSession?.id,
+        ),
+      );
 
-      EventChannel(eventChannelName!)
-          .receiveBroadcastStream()
+      EventChannel(eventChannelName)
+          .receiveGuardedBroadcastStream(onError: convertPlatformException)
           .listen((arguments) {
         final name = arguments['name'];
         if (name == 'Auth#phoneVerificationCompleted') {
@@ -563,14 +627,14 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
           final Map<dynamic, dynamic>? details = error?['details'];
 
           FirebaseAuthException exception = FirebaseAuthException(
-            message: details != null ? details['message'] : error?['message'],
-            code: details != null ? details['code'] : 'unknown',
+            message: details?['message'] ?? error?['message'],
+            code: details?['code'] ?? error?['code'] ?? 'unknown',
           );
 
           verificationFailed(exception);
         } else if (name == 'Auth#phoneCodeSent') {
           final String verificationId = arguments['verificationId'];
-          final int forceResendingToken = arguments['forceResendingToken'];
+          final int? forceResendingToken = arguments['forceResendingToken'];
 
           codeSent(verificationId, forceResendingToken);
         } else if (name == 'Auth#phoneCodeAutoRetrievalTimeout') {
@@ -579,8 +643,37 @@ class MethodChannelFirebaseAuth extends FirebaseAuthPlatform {
           codeAutoRetrievalTimeout(verificationId);
         }
       });
-    } catch (e) {
-      throw convertPlatformException(e);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
+    }
+  }
+
+  @override
+  Future<void> revokeTokenWithAuthorizationCode(
+      String authorizationCode) async {
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        await _api.revokeTokenWithAuthorizationCode(
+          pigeonDefault,
+          authorizationCode,
+        );
+      } catch (e, stack) {
+        convertPlatformException(e, stack);
+      }
+    } else {
+      throw UnimplementedError(
+        'revokeTokenWithAuthorizationCode() is only available on apple platforms.',
+      );
+    }
+  }
+
+  @override
+  Future<void> initializeRecaptchaConfig() async {
+    try {
+      await _api.initializeRecaptchaConfig(pigeonDefault);
+    } catch (e, stack) {
+      convertPlatformException(e, stack);
     }
   }
 }

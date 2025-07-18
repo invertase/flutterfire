@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -11,32 +12,36 @@ import 'method_channel_document_change.dart';
 class MethodChannelQuerySnapshot extends QuerySnapshotPlatform {
   /// Creates a [MethodChannelQuerySnapshot] from the given [data]
   MethodChannelQuerySnapshot(
-      FirebaseFirestorePlatform firestore, Map<dynamic, dynamic> data)
+      FirebaseFirestorePlatform firestore, PigeonQuerySnapshot data)
       : super(
-            List<DocumentSnapshotPlatform>.generate(data['documents'].length,
-                (int index) {
-              return DocumentSnapshotPlatform(
-                firestore,
-                data['paths'][index],
-                <String, dynamic>{
-                  'data': Map<String, dynamic>.from(data['documents'][index]),
-                  'metadata': <String, dynamic>{
-                    'isFromCache': data['metadatas'][index]['isFromCache'],
-                    'hasPendingWrites': data['metadatas'][index]
-                        ['hasPendingWrites'],
-                  },
-                },
-              );
-            }),
-            List<DocumentChangePlatform>.generate(
-                data['documentChanges'].length, (int index) {
-              return MethodChannelDocumentChange(
-                firestore,
-                Map<String, dynamic>.from(data['documentChanges'][index]),
-              );
-            }),
+            data.documents
+                .map<DocumentSnapshotPlatform?>((document) {
+                  if (document == null) {
+                    return null;
+                  }
+                  return DocumentSnapshotPlatform(
+                    firestore,
+                    document.path,
+                    document.data,
+                    document.metadata,
+                  );
+                })
+                .nonNulls
+                .toList(),
+            data.documentChanges
+                .map((documentChange) {
+                  if (documentChange == null) {
+                    return null;
+                  }
+                  return MethodChannelDocumentChange(
+                    firestore,
+                    documentChange,
+                  );
+                })
+                .nonNulls
+                .toList(),
             SnapshotMetadataPlatform(
-              data['metadata']['hasPendingWrites'],
-              data['metadata']['isFromCache'],
+              data.metadata.hasPendingWrites,
+              data.metadata.isFromCache,
             ));
 }

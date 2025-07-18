@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -16,7 +17,9 @@ class UserMetadata {
   /// When this account was created as dictated by the server clock.
   DateTime? get creationTime => _creationTimestamp == null
       ? null
-      : DateTime.fromMillisecondsSinceEpoch(_creationTimestamp!);
+      // Needed to support Flutter <3.19
+      // ignore: unnecessary_non_null_assertion
+      : DateTime.fromMillisecondsSinceEpoch(_creationTimestamp!, isUtc: true);
 
   /// When the user last signed in as dictated by the server clock.
   ///
@@ -24,10 +27,12 @@ class UserMetadata {
   /// sign-in attempts.
   DateTime? get lastSignInTime => _lastSignInTime == null
       ? null
-      : DateTime.fromMillisecondsSinceEpoch(_lastSignInTime!);
+      // Needed to support Flutter <3.19
+      // ignore: unnecessary_non_null_assertion
+      : DateTime.fromMillisecondsSinceEpoch(_lastSignInTime!, isUtc: true);
 
   @override
   String toString() {
-    return 'UserMetadata(creationTime: ${creationTime.toString()}, lastSignInTime: ${lastSignInTime.toString()})';
+    return 'UserMetadata(creationTime: $creationTime, lastSignInTime: $lastSignInTime)';
   }
 }

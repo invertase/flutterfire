@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -52,6 +53,8 @@ void main() {
       expect(result.maxOperationRetryTime, equals(120000));
       expect(result.maxDownloadRetryTime, equals(600000));
       expect(result.maxUploadRetryTime, equals(600000));
+      expect(result.emulatorHost, isNull);
+      expect(result.emulatorPort, isNull);
     });
 
     test('get.instance', () {
@@ -140,6 +143,16 @@ void main() {
       } on UnimplementedError catch (e) {
         expect(
             e.message, equals('setMaxDownloadRetryTime() is not implemented'));
+        return;
+      }
+      fail('Should have thrown an [UnimplementedError]');
+    });
+
+    test('throws if ref()', () {
+      try {
+        firebaseStoragePlatform!.useStorageEmulator('foo', 1234);
+      } on UnimplementedError catch (e) {
+        expect(e.message, equals('useStorageEmulator() is not implemented'));
         return;
       }
       fail('Should have thrown an [UnimplementedError]');

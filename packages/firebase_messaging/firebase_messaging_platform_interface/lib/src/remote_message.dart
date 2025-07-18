@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -49,6 +50,25 @@ class RemoteMessage {
       threadId: map['threadId'],
       ttl: map['ttl'],
     );
+  }
+
+  /// Returns the [RemoteMessage] as a raw Map.
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'senderId': senderId,
+      'category': category,
+      'collapseKey': collapseKey,
+      'contentAvailable': contentAvailable,
+      'data': data,
+      'from': from,
+      'messageId': messageId,
+      'messageType': messageType,
+      'mutableContent': mutableContent,
+      'notification': notification?.toMap(),
+      'sentTime': sentTime?.millisecondsSinceEpoch,
+      'threadId': threadId,
+      'ttl': ttl,
+    };
   }
 
   /// The ID of the upstream sender location.

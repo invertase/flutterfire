@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_core;
+part of '../firebase_core.dart';
 
 /// Represents a single Firebase app instance.
 ///
@@ -14,7 +15,7 @@ class FirebaseApp {
   /// This constructor ensures that the delegate instance it is
   /// constructed with is one which extends [FirebaseAppPlatform].
   FirebaseApp._(this._delegate) {
-    FirebaseAppPlatform.verifyExtends(_delegate);
+    FirebaseAppPlatform.verify(_delegate);
   }
 
   final FirebaseAppPlatform _delegate;
@@ -23,6 +24,8 @@ class FirebaseApp {
   ///
   /// Once deleted, any plugin functionality using this app instance will throw
   /// an error.
+  ///
+  /// Deleting the default app is not possible and throws an exception.
   Future<void> delete() async {
     await _delegate.delete();
   }
@@ -64,7 +67,7 @@ class FirebaseApp {
 
   @override
   // ignore: avoid_equals_and_hash_code_on_mutable_classes
-  int get hashCode => hashValues(name, options);
+  int get hashCode => Object.hash(name, options);
 
   @override
   String toString() => '$FirebaseApp($name)';

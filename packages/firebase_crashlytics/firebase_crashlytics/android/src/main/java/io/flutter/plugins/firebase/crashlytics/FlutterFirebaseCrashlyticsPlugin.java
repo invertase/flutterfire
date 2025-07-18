@@ -6,19 +6,24 @@ package io.flutter.plugins.firebase.crashlytics;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
+import com.google.firebase.crashlytics.FlutterFirebaseCrashlyticsInternal;
+import com.google.firebase.crashlytics.internal.Logger;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
 import io.flutter.plugins.firebase.core.FlutterFirebasePlugin;
 import io.flutter.plugins.firebase.core.FlutterFirebasePluginRegistry;
 import java.util.ArrayList;
@@ -33,11 +38,8 @@ public class FlutterFirebaseCrashlyticsPlugin
   public static final String TAG = "FLTFirebaseCrashlytics";
   private MethodChannel channel;
 
-  /** Plugin registration. */
-  public static void registerWith(Registrar registrar) {
-    FlutterFirebaseCrashlyticsPlugin instance = new FlutterFirebaseCrashlyticsPlugin();
-    instance.initInstance(registrar.messenger());
-  }
+  private static final String FIREBASE_CRASHLYTICS_COLLECTION_ENABLED =
+      "firebase_crashlytics_collection_enabled";
 
   private void initInstance(BinaryMessenger messenger) {
     String channelName = "plugins.flutter.io/firebase_crashlytics";
@@ -60,22 +62,30 @@ public class FlutterFirebaseCrashlyticsPlugin
   }
 
   private Task<Map<String, Object>> checkForUnsentReports() {
-    return Tasks.call(
-        cachedThreadPool,
-        () -> {
-          final boolean unsentReports =
-              Tasks.await(FirebaseCrashlytics.getInstance().checkForUnsentReports());
+    TaskCompletionSource<Map<String, Object>> taskCompletionSource = new TaskCompletionSource<>();
 
-          return new HashMap<String, Object>() {
-            {
-              put(Constants.UNSENT_REPORTS, unsentReports);
-            }
-          };
+    cachedThreadPool.execute(
+        () -> {
+          try {
+            final boolean unsentReports =
+                Tasks.await(FirebaseCrashlytics.getInstance().checkForUnsentReports());
+
+            taskCompletionSource.setResult(
+                new HashMap<String, Object>() {
+                  {
+                    put(Constants.UNSENT_REPORTS, unsentReports);
+                  }
+                });
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private void crash() {
-    new Handler()
+    new Handler(Looper.myLooper())
         .postDelayed(
             () -> {
               throw new FirebaseCrashlyticsTestCrash();
@@ -84,131 +94,209 @@ public class FlutterFirebaseCrashlyticsPlugin
   }
 
   private Task<Void> deleteUnsentReports() {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          FirebaseCrashlytics.getInstance().deleteUnsentReports();
-          return null;
+          try {
+            FirebaseCrashlytics.getInstance().deleteUnsentReports();
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Map<String, Object>> didCrashOnPreviousExecution() {
-    return Tasks.call(
-        cachedThreadPool,
-        () -> {
-          final boolean didCrashOnPreviousExecution =
-              FirebaseCrashlytics.getInstance().didCrashOnPreviousExecution();
+    TaskCompletionSource<Map<String, Object>> taskCompletionSource = new TaskCompletionSource<>();
 
-          return new HashMap<String, Object>() {
-            {
-              put(Constants.DID_CRASH_ON_PREVIOUS_EXECUTION, didCrashOnPreviousExecution);
-            }
-          };
+    cachedThreadPool.execute(
+        () -> {
+          try {
+            final boolean didCrashOnPreviousExecution =
+                FirebaseCrashlytics.getInstance().didCrashOnPreviousExecution();
+
+            taskCompletionSource.setResult(
+                new HashMap<String, Object>() {
+                  {
+                    put(Constants.DID_CRASH_ON_PREVIOUS_EXECUTION, didCrashOnPreviousExecution);
+                  }
+                });
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Void> recordError(final Map<String, Object> arguments) {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+          try {
+            FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
 
-          final String dartExceptionMessage =
-              (String) Objects.requireNonNull(arguments.get(Constants.EXCEPTION));
-          final String reason = (String) arguments.get(Constants.REASON);
-          final String information =
-              (String) Objects.requireNonNull(arguments.get(Constants.INFORMATION));
+            final String dartExceptionMessage =
+                (String) Objects.requireNonNull(arguments.get(Constants.EXCEPTION));
+            final String reason = (String) arguments.get(Constants.REASON);
+            final String information =
+                (String) Objects.requireNonNull(arguments.get(Constants.INFORMATION));
+            final boolean fatal = (boolean) Objects.requireNonNull(arguments.get(Constants.FATAL));
+            final String buildId =
+                (String) Objects.requireNonNull(arguments.get(Constants.BUILD_ID));
+            @SuppressWarnings("unchecked")
+            final List<String> loadingUnits =
+                (List<String>) Objects.requireNonNull(arguments.get(Constants.LOADING_UNITS));
 
-          Exception exception;
-          if (reason != null) {
-            // Set a "reason" (to match iOS) to show where the exception was thrown.
-            crashlytics.setCustomKey(Constants.FLUTTER_ERROR_REASON, "thrown " + reason);
-            exception =
-                new FlutterError(dartExceptionMessage + ". " + "Error thrown " + reason + ".");
-          } else {
-            exception = new FlutterError(dartExceptionMessage);
-          }
-          crashlytics.setCustomKey(Constants.FLUTTER_ERROR_EXCEPTION, dartExceptionMessage);
-
-          final List<StackTraceElement> elements = new ArrayList<>();
-          @SuppressWarnings("unchecked")
-          final List<Map<String, String>> errorElements =
-              (List<Map<String, String>>)
-                  Objects.requireNonNull(arguments.get(Constants.STACK_TRACE_ELEMENTS));
-
-          for (Map<String, String> errorElement : errorElements) {
-            final StackTraceElement stackTraceElement = generateStackTraceElement(errorElement);
-            if (stackTraceElement != null) {
-              elements.add(stackTraceElement);
+            if (buildId.length() > 0) {
+              FlutterFirebaseCrashlyticsInternal.setFlutterBuildId(buildId);
             }
-          }
-          exception.setStackTrace(elements.toArray(new StackTraceElement[0]));
 
-          // Log information.
-          if (!information.isEmpty()) {
-            crashlytics.log(information);
-          }
+            FlutterFirebaseCrashlyticsInternal.setLoadingUnits(loadingUnits);
 
-          crashlytics.recordException(exception);
-          return null;
+            Exception exception;
+            if (reason != null) {
+              // Set a "reason" (to match iOS) to show where the exception was thrown.
+              crashlytics.setCustomKey(Constants.FLUTTER_ERROR_REASON, "thrown " + reason);
+              exception =
+                  new FlutterError(dartExceptionMessage + ". " + "Error thrown " + reason + ".");
+            } else {
+              exception = new FlutterError(dartExceptionMessage);
+            }
+
+            crashlytics.setCustomKey(Constants.FLUTTER_ERROR_EXCEPTION, dartExceptionMessage);
+
+            final List<StackTraceElement> elements = new ArrayList<>();
+            @SuppressWarnings("unchecked")
+            final List<Map<String, String>> errorElements =
+                (List<Map<String, String>>)
+                    Objects.requireNonNull(arguments.get(Constants.STACK_TRACE_ELEMENTS));
+
+            for (Map<String, String> errorElement : errorElements) {
+              final StackTraceElement stackTraceElement = generateStackTraceElement(errorElement);
+              if (stackTraceElement != null) {
+                elements.add(stackTraceElement);
+              }
+            }
+            exception.setStackTrace(elements.toArray(new StackTraceElement[0]));
+
+            // Log information.
+            if (!information.isEmpty()) {
+              crashlytics.log(information);
+            }
+
+            if (fatal) {
+              FlutterFirebaseCrashlyticsInternal.recordFatalException(exception);
+            } else {
+              crashlytics.recordException(exception);
+            }
+
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Void> log(final Map<String, Object> arguments) {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          String message = (String) Objects.requireNonNull(arguments.get(Constants.MESSAGE));
-          FirebaseCrashlytics.getInstance().log(message);
-          return null;
+          try {
+            String message = (String) Objects.requireNonNull(arguments.get(Constants.MESSAGE));
+            FirebaseCrashlytics.getInstance().log(message);
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Void> sendUnsentReports() {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          FirebaseCrashlytics.getInstance().sendUnsentReports();
-          return null;
+          try {
+            FirebaseCrashlytics.getInstance().sendUnsentReports();
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Map<String, Object>> setCrashlyticsCollectionEnabled(
       final Map<String, Object> arguments) {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Map<String, Object>> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          Boolean enabled = (Boolean) Objects.requireNonNull(arguments.get(Constants.ENABLED));
-          FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(enabled);
-          return new HashMap<String, Object>() {
-            {
-              put(
-                  Constants.IS_CRASHLYTICS_COLLECTION_ENABLED,
-                  isCrashlyticsCollectionEnabled(FirebaseApp.getInstance()));
-            }
-          };
+          try {
+            Boolean enabled = (Boolean) Objects.requireNonNull(arguments.get(Constants.ENABLED));
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(enabled);
+
+            taskCompletionSource.setResult(
+                new HashMap<String, Object>() {
+                  {
+                    put(
+                        Constants.IS_CRASHLYTICS_COLLECTION_ENABLED,
+                        isCrashlyticsCollectionEnabled(FirebaseApp.getInstance()));
+                  }
+                });
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Void> setUserIdentifier(final Map<String, Object> arguments) {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          String identifier = (String) Objects.requireNonNull(arguments.get(Constants.IDENTIFIER));
-          FirebaseCrashlytics.getInstance().setUserId(identifier);
-          return null;
+          try {
+            String identifier =
+                (String) Objects.requireNonNull(arguments.get(Constants.IDENTIFIER));
+            FirebaseCrashlytics.getInstance().setUserId(identifier);
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   private Task<Void> setCustomKey(final Map<String, Object> arguments) {
-    return Tasks.call(
-        cachedThreadPool,
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
         () -> {
-          String key = (String) Objects.requireNonNull(arguments.get(Constants.KEY));
-          String value = (String) Objects.requireNonNull(arguments.get(Constants.VALUE));
-          FirebaseCrashlytics.getInstance().setCustomKey(key, value);
-          return null;
+          try {
+            String key = (String) Objects.requireNonNull(arguments.get(Constants.KEY));
+            String value = (String) Objects.requireNonNull(arguments.get(Constants.VALUE));
+            FirebaseCrashlytics.getInstance().setCustomKey(key, value);
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
         });
+
+    return taskCompletionSource.getTask();
   }
 
   @Override
@@ -293,6 +381,7 @@ public class FlutterFirebaseCrashlyticsPlugin
   }
 
   // TODO remove once Crashlytics public API supports isCrashlyticsCollectionEnabled
+
   /**
    * Firebase Crashlytics SDK doesn't provide a way to read current enabled status. So we read it
    * ourselves from shared preferences instead.
@@ -302,35 +391,79 @@ public class FlutterFirebaseCrashlyticsPlugin
     SharedPreferences crashlyticsSharedPrefs =
         getCrashlyticsSharedPrefs(app.getApplicationContext());
 
-    if (crashlyticsSharedPrefs.contains("firebase_crashlytics_collection_enabled")) {
-      enabled = crashlyticsSharedPrefs.getBoolean("firebase_crashlytics_collection_enabled", true);
+    if (crashlyticsSharedPrefs.contains(FIREBASE_CRASHLYTICS_COLLECTION_ENABLED)) {
+      enabled = crashlyticsSharedPrefs.getBoolean(FIREBASE_CRASHLYTICS_COLLECTION_ENABLED, true);
     } else {
-      if (app.isDataCollectionDefaultEnabled()) {
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true);
-        enabled = true;
-      } else {
-        enabled = false;
-      }
+
+      Boolean manifestEnabled =
+          readCrashlyticsDataCollectionEnabledFromManifest(app.getApplicationContext());
+
+      FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(manifestEnabled);
+      enabled = manifestEnabled;
     }
 
     return enabled;
   }
 
+  private static Boolean readCrashlyticsDataCollectionEnabledFromManifest(
+      Context applicationContext) {
+    try {
+      final PackageManager packageManager = applicationContext.getPackageManager();
+      if (packageManager != null) {
+        final ApplicationInfo applicationInfo =
+            packageManager.getApplicationInfo(
+                applicationContext.getPackageName(), PackageManager.GET_META_DATA);
+        if (applicationInfo != null
+            && applicationInfo.metaData != null
+            && applicationInfo.metaData.containsKey(FIREBASE_CRASHLYTICS_COLLECTION_ENABLED)) {
+          return applicationInfo.metaData.getBoolean(FIREBASE_CRASHLYTICS_COLLECTION_ENABLED);
+        }
+      }
+    } catch (PackageManager.NameNotFoundException e) {
+      // This shouldn't happen since it's this app's package, but fall through to default
+      // if so.
+      Logger.getLogger().e("Could not read data collection permission from manifest", e);
+    }
+    return true;
+  }
+
   @Override
   public Task<Map<String, Object>> getPluginConstantsForFirebaseApp(FirebaseApp firebaseApp) {
-    return Tasks.call(
-        () ->
-            new HashMap<String, Object>() {
-              {
-                put(
-                    Constants.IS_CRASHLYTICS_COLLECTION_ENABLED,
-                    isCrashlyticsCollectionEnabled(FirebaseApp.getInstance()));
-              }
-            });
+    TaskCompletionSource<Map<String, Object>> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
+        () -> {
+          try {
+            taskCompletionSource.setResult(
+                new HashMap<String, Object>() {
+                  {
+                    if (firebaseApp.getName().equals("[DEFAULT]"))
+                      put(
+                          Constants.IS_CRASHLYTICS_COLLECTION_ENABLED,
+                          isCrashlyticsCollectionEnabled(FirebaseApp.getInstance()));
+                  }
+                });
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
+        });
+
+    return taskCompletionSource.getTask();
   }
 
   @Override
   public Task<Void> didReinitializeFirebaseCore() {
-    return Tasks.call(() -> null);
+    TaskCompletionSource<Void> taskCompletionSource = new TaskCompletionSource<>();
+
+    cachedThreadPool.execute(
+        () -> {
+          try {
+            taskCompletionSource.setResult(null);
+          } catch (Exception e) {
+            taskCompletionSource.setException(e);
+          }
+        });
+
+    return taskCompletionSource.getTask();
   }
 }

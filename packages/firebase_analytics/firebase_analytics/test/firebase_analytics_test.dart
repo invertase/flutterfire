@@ -1,425 +1,235 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2021 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-
-import 'package:flutter_test/flutter_test.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import './mock.dart';
+
+const String COUPON = 'coupon';
+const String CURRENCY = 'currency';
+const String PAYMENT_TYPE = 'payment_type';
+const String VALUE = 'value';
+const double VALUE_DOUBLE = 434;
+const String ITEMS = 'items';
+const String SHIPPING_TIER = 'shipping_tier';
+const String AD_PLATFORM = 'ad_platform';
+const String AD_SOURCE = 'ad_source';
+const String AD_FORMAT = 'ad_format';
+const String AD_UNIT_NAME = 'ad_unit_name';
+const String SOURCE = 'source';
+const String MEDIUM = 'medium';
+const String CAMPAIGN = 'campaign';
+const String TERM = 'term';
+const String CONTENT = 'content';
+const String CP1 = 'cp1';
+const String ACLID = 'aclid';
+const String VIRTUAL_CURRENCY_NAME = 'virtual_currency_name';
+const String GROUP_ID = 'group_id';
+const String LEVEL = 'level';
+const String LEVEL_NAME = 'level_name';
+const String SUCCESS = 'success';
+const int SUCCESS_INT = 8;
+const int LEVEL_INT = 6;
+const String CHARACTER = 'character';
+const String SCORE = 'score';
+const int SCORE_INT = 9;
+const String METHOD = 'method';
+const String TAX = 'tax';
+const double TAX_DOUBLE = 45;
+const String SHIPPING = 'shipping';
+const double SHIPPING_DOUBLE = 68;
+const String TRANSACTION_ID = 'transaction_id';
+const String AFFILIATION = 'affiliation';
+const String SCREEN_CLASS = 'screen_class';
+const String SCREEN_NAME = 'screen_name';
+const String ITEM_LIST_ID = 'item_list_id';
+const String ITEM_LIST_NAME = 'item_list_name';
+const String ITEM_ID = 'item_id';
+const String CREATIVE_NAME = 'creative_name';
+const String CREATIVE_SLOT = 'creative_slot';
+const String PROMOTION_ID = 'promotion_id';
+const String PROMOTION_NAME = 'promotion_name';
+const String LOCATION_ID = 'location_id';
+const String SEARCH_TERM = 'search_term';
+const String NUMBER_OF_NIGHTS = 'number_of_nights';
+const int NUMBER_OF_NIGHTS_INT = 7;
+const String NUMBER_OF_PASSENGERS = 'number_of_passengers';
+const int NUMBER_OF_PASSENGERS_INT = 2;
+const String NUMBER_OF_ROOMS = 'number_of_rooms';
+const int NUMBER_OF_ROOMS_INT = 12;
+const String ORIGIN = 'origin';
+const String DESTINATION = 'destination';
+const String START_DATE = 'start_date';
+const String END_DATE = 'end_date';
+const String TRAVEL_CLASS = 'travel_class';
+const String CONTENT_TYPE = 'content_type';
+const String ITEM_NAME = 'item_name';
+const String ACHIEVEMENT_ID = 'achievement_id';
+
+final ITEM = AnalyticsEventItem(
+  affiliation: 'affil',
+  coupon: 'coup',
+  creativeName: 'creativeName',
+  creativeSlot: 'creativeSlot',
+  discount: 2.22,
+  index: 3,
+  itemBrand: 'itemBrand',
+  itemCategory: 'itemCategory',
+  itemCategory2: 'itemCategory2',
+  itemCategory3: 'itemCategory3',
+  itemCategory4: 'itemCategory4',
+  itemCategory5: 'itemCategory5',
+  itemId: 'itemId',
+  itemListId: 'itemListId',
+  itemListName: 'itemListName',
+  itemName: 'itemName',
+  itemVariant: 'itemVariant',
+  locationId: 'locationId',
+  price: 9.99,
+  currency: 'USD',
+  promotionId: 'promotionId',
+  promotionName: 'promotionName',
+  quantity: 1,
+  parameters: {'a': 'b'},
+);
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  setupFirebaseAnalyticsMocks();
 
-  final FirebaseAnalytics analytics = FirebaseAnalytics();
-  const MethodChannel channel =
-      MethodChannel('plugins.flutter.io/firebase_analytics');
-  MethodCall? methodCall;
+  FirebaseAnalytics? analytics;
 
-  setUp(() async {
-    channel.setMockMethodCallHandler((MethodCall m) async {
-      methodCall = m;
-    });
-  });
-
-  tearDown(() {
-    channel.setMockMethodCallHandler(null);
-    methodCall = null;
-  });
-
-  group('filterOutNulls', () {
-    test('filters out null values', () {
-      final Map<String, dynamic> original = <String, dynamic>{
-        'a': 1,
-        'b': null,
-        'c': 'd'
-      };
-      final Map<String, dynamic> filtered = filterOutNulls(original);
-
-      expect(filtered, isNot(same(original)));
-      expect(original, <String, dynamic>{'a': 1, 'b': null, 'c': 'd'});
-      expect(filtered, <String, dynamic>{'a': 1, 'c': 'd'});
-    });
-  });
-
-  group('FirebaseAnalytics', () {
-    test('setUserId', () async {
-      await analytics.setUserId('test-user-id');
-      expect(
-        methodCall,
-        isMethodCall(
-          'setUserId',
-          arguments: 'test-user-id',
-        ),
-      );
+  group('$FirebaseAnalytics', () {
+    setUpAll(() async {
+      await Firebase.initializeApp();
+      analytics = FirebaseAnalytics.instance;
     });
 
-    test('setCurrentScreen', () async {
-      await analytics.setCurrentScreen(
-        screenName: 'test-screen-name',
-        screenClassOverride: 'test-class-override',
-      );
-      expect(
-        methodCall,
-        isMethodCall(
-          'setCurrentScreen',
-          arguments: <String, String>{
-            'screenName': 'test-screen-name',
-            'screenClassOverride': 'test-class-override',
-          },
-        ),
-      );
+    setUp(() async {
+      methodCallLog.clear();
     });
 
-    test('setUserProperty', () async {
-      await analytics.setUserProperty(name: 'test_name', value: 'test-value');
-      expect(
-        methodCall,
-        isMethodCall(
-          'setUserProperty',
-          arguments: <String, String>{
-            'name': 'test_name',
-            'value': 'test-value',
-          },
-        ),
-      );
-    });
+    tearDown(methodCallLog.clear);
 
-    test('setUserProperty rejects invalid names', () async {
-      // invalid character
-      expect(analytics.setUserProperty(name: 'test-name', value: 'test-value'),
-          throwsArgumentError);
-      // non-alpha first character
-      expect(analytics.setUserProperty(name: '0test', value: 'test-value'),
-          throwsArgumentError);
-      // blank
-      expect(analytics.setUserProperty(name: '', value: 'test-value'),
-          throwsArgumentError);
-      // reserved prefix
-      expect(
-          analytics.setUserProperty(name: 'firebase_test', value: 'test-value'),
-          throwsArgumentError);
-    });
-
-    test('setAnalyticsCollectionEnabled', () async {
-      await analytics.setAnalyticsCollectionEnabled(false);
-      expect(
-        methodCall,
-        isMethodCall(
-          'setAnalyticsCollectionEnabled',
-          arguments: false,
-        ),
-      );
-    });
-
-    test('setSessionTimeoutDuration', () async {
-      await analytics.android!.setSessionTimeoutDuration(234);
-      expect(
-        methodCall,
-        isMethodCall(
-          'setSessionTimeoutDuration',
-          arguments: 234,
-        ),
-      );
-    }, testOn: 'android');
-
-    test('resetAnalyticsData', () async {
-      await analytics.resetAnalyticsData();
-      expect(
-        methodCall,
-        isMethodCall(
-          'resetAnalyticsData',
-          arguments: null,
-        ),
-      );
-    });
-  });
-
-  group('FirebaseAnalytics analytics events', () {
-    test('logEvent log events', () async {
-      await analytics.logEvent(
-        name: 'test-event',
-        parameters: <String, Object>{'a': 'b'},
-      );
-      expect(
-        methodCall,
-        isMethodCall(
-          'logEvent',
-          arguments: <String, dynamic>{
-            'name': 'test-event',
-            'parameters': <String, dynamic>{'a': 'b'},
-          },
-        ),
-      );
-    });
-
-    test('logEvent rejects events with reserved names', () async {
-      expect(analytics.logEvent(name: 'app_clear_data'), throwsArgumentError);
-    });
-
-    test('logEvent rejects events with reserved prefix', () async {
-      expect(analytics.logEvent(name: 'firebase_foo'), throwsArgumentError);
-    });
-
-    void smokeTest(
-      String testFunctionName,
-      Future<void> Function() testFunction,
-    ) {
-      test('$testFunctionName works', () async {
-        await testFunction();
-        expect(methodCall!.arguments['name'], testFunctionName);
-      });
-    }
-
-    smokeTest('add_payment_info', analytics.logAddPaymentInfo);
-
-    smokeTest(
-        'add_to_cart',
-        () => analytics.logAddToCart(
-              itemId: 'test-id',
-              itemName: 'test-name',
-              itemCategory: 'test-category',
-              quantity: 5,
-            ));
-
-    smokeTest(
-        'add_to_wishlist',
-        () => analytics.logAddToWishlist(
-              itemId: 'test-id',
-              itemName: 'test-name',
-              itemCategory: 'test-category',
-              quantity: 5,
-            ));
-
-    smokeTest('app_open', analytics.logAppOpen);
-
-    smokeTest('begin_checkout', analytics.logBeginCheckout);
-
-    smokeTest(
-        'campaign_details',
-        () => analytics.logCampaignDetails(
-              source: 'test-source',
-              medium: 'test-medium',
-              campaign: 'test-campaign',
-            ));
-
-    smokeTest(
-        'earn_virtual_currency',
-        () => analytics.logEarnVirtualCurrency(
-              virtualCurrencyName: 'bitcoin',
-              value: 34,
-            ));
-
-    smokeTest('ecommerce_purchase', analytics.logEcommercePurchase);
-
-    smokeTest('generate_lead', analytics.logGenerateLead);
-
-    smokeTest(
-        'join_group',
-        () => analytics.logJoinGroup(
-              groupId: 'test-group-id',
-            ));
-
-    smokeTest(
-        'level_up',
-        () => analytics.logLevelUp(
-              level: 56,
-            ));
-
-    smokeTest(
-        'level_start',
-        () => analytics.logLevelStart(
-              levelName: 'level-name',
-            ));
-
-    smokeTest(
-        'level_end',
-        () => analytics.logLevelEnd(
-              levelName: 'level-name',
-              success: 1,
-            ));
-
-    smokeTest('login', analytics.logLogin);
-
-    smokeTest(
-        'login',
-        () => analytics.logLogin(
-              loginMethod: 'email',
-            ));
-
-    smokeTest(
-        'post_score',
-        () => analytics.logPostScore(
-              score: 34,
-            ));
-
-    smokeTest(
-        'present_offer',
-        () => analytics.logPresentOffer(
-              itemId: 'test-id',
-              itemName: 'test-name',
-              itemCategory: 'test-category',
-              quantity: 5,
-            ));
-
-    smokeTest('purchase_refund', analytics.logPurchaseRefund);
-
-    smokeTest(
-        'search',
-        () => analytics.logSearch(
-              searchTerm: 'test search term',
-            ));
-
-    smokeTest(
-        'select_content',
-        () => analytics.logSelectContent(
-              contentType: 'test content type',
-              itemId: 'test item id',
-            ));
-
-    smokeTest(
-        'share',
-        () => analytics.logShare(
-              contentType: 'test content type',
-              itemId: 'test item id',
-              method: 'test method',
-            ));
-
-    smokeTest(
-        'sign_up',
-        () => analytics.logSignUp(
-              signUpMethod: 'test sign-up method',
-            ));
-
-    smokeTest(
-        'spend_virtual_currency',
-        () => analytics.logSpendVirtualCurrency(
-              itemName: 'test-item-name',
-              virtualCurrencyName: 'bitcoin',
-              value: 345,
-            ));
-
-    smokeTest('tutorial_begin', analytics.logTutorialBegin);
-
-    smokeTest('tutorial_complete', analytics.logTutorialComplete);
-
-    smokeTest(
-        'unlock_achievement',
-        () => analytics.logUnlockAchievement(
-              id: 'firebase analytics api coverage',
-            ));
-
-    smokeTest(
-        'view_item',
-        () => analytics.logViewItem(
-              itemId: 'test-id',
-              itemName: 'test-name',
-              itemCategory: 'test-category',
-            ));
-
-    smokeTest(
-        'view_item_list',
-        () => analytics.logViewItemList(
-              itemCategory: 'test-category',
-            ));
-
-    smokeTest(
-        'view_search_results',
-        () => analytics.logViewSearchResults(
-              searchTerm: 'test search term',
-            ));
-
-    smokeTest('set_checkout_option', () {
-      return analytics.logSetCheckoutOption(
-          checkoutStep: 1, checkoutOption: 'some credit card');
-    });
-
-    void testRequiresValueAndCurrencyTogether(
-      String methodName,
-      Future<void> Function() testFn,
-    ) {
-      test('$methodName requires value and currency together', () async {
+    group('AnalyticsEventItem', () {
+      test('Should properly toString', () {
         expect(
-          testFn,
-          throwsA(
-            isA<ArgumentError>().having((e) => e.message, 'message',
-                valueAndCurrencyMustBeTogetherError),
+          ITEM.toString(),
+          equals(
+            'AnalyticsEventItem({a: b, affiliation: affil, currency: USD, coupon: coup, creative_name: creativeName, creative_slot: creativeSlot, discount: 2.22, index: 3, item_brand: itemBrand, item_category: itemCategory, item_category2: itemCategory2, item_category3: itemCategory3, item_category4: itemCategory4, item_category5: itemCategory5, item_id: itemId, item_list_id: itemListId, item_list_name: itemListName, item_name: itemName, item_variant: itemVariant, location_id: locationId, price: 9.99, promotion_id: promotionId, promotion_name: promotionName, quantity: 1})',
           ),
         );
       });
-    }
-
-    testRequiresValueAndCurrencyTogether('logAddToCart', () {
-      return analytics.logAddToCart(
-        itemId: 'test-id',
-        itemName: 'test-name',
-        itemCategory: 'test-category',
-        quantity: 5,
-        value: 123.90,
-      );
     });
 
-    testRequiresValueAndCurrencyTogether('logRemoveFromCart', () {
-      return analytics.logRemoveFromCart(
-        itemId: 'test-id',
-        itemName: 'test-name',
-        itemCategory: 'test-category',
-        quantity: 5,
-        value: 123.90,
-      );
+    group('logEvent', () {
+      test('reject events with reserved names', () async {
+        expect(
+          analytics!.logEvent(name: 'app_clear_data'),
+          throwsArgumentError,
+        );
+      });
+
+      test('reject events with reserved prefix', () async {
+        expect(analytics!.logEvent(name: 'firebase_foo'), throwsArgumentError);
+      });
+
+      void testRequiresValueAndCurrencyTogether(
+        String methodName,
+        Future<void> Function() testFn,
+      ) {
+        test('$methodName requires value and currency together', () async {
+          expect(
+            testFn,
+            throwsA(
+              isA<ArgumentError>().having(
+                (e) => e.message,
+                'message',
+                valueAndCurrencyMustBeTogetherError,
+              ),
+            ),
+          );
+        });
+      }
+
+      testRequiresValueAndCurrencyTogether('logAddToCart', () {
+        return analytics!.logAddToCart(
+          value: 123.90,
+        );
+      });
+
+      testRequiresValueAndCurrencyTogether('logRemoveFromCart', () {
+        return analytics!.logRemoveFromCart(
+          value: 123.90,
+        );
+      });
+
+      testRequiresValueAndCurrencyTogether('logAddToWishlist', () {
+        return analytics!.logAddToWishlist(
+          value: 123.90,
+        );
+      });
+
+      testRequiresValueAndCurrencyTogether('logBeginCheckout', () {
+        return analytics!.logBeginCheckout(
+          value: 123.90,
+        );
+      });
+
+      testRequiresValueAndCurrencyTogether('logGenerateLead', () {
+        return analytics!.logGenerateLead(
+          value: 123.90,
+        );
+      });
+
+      testRequiresValueAndCurrencyTogether('logViewItem', () {
+        return analytics!.logViewItem(
+          value: 123.90,
+        );
+      });
     });
 
-    testRequiresValueAndCurrencyTogether('logAddToWishlist', () {
-      return analytics.logAddToWishlist(
-        itemId: 'test-id',
-        itemName: 'test-name',
-        itemCategory: 'test-category',
-        quantity: 5,
-        value: 123.90,
-      );
+    group('filter out nulls', () {
+      test('filters out null values', () {
+        final Map<String, dynamic> original = <String, dynamic>{
+          'a': 1,
+          'b': null,
+          'c': 'd',
+        };
+        final Map<String, dynamic> filtered = filterOutNulls(original);
+
+        expect(filtered, isNot(same(original)));
+        expect(original, <String, dynamic>{'a': 1, 'b': null, 'c': 'd'});
+        expect(filtered, <String, dynamic>{'a': 1, 'c': 'd'});
+      });
     });
 
-    testRequiresValueAndCurrencyTogether('logBeginCheckout', () {
-      return analytics.logBeginCheckout(
-        value: 123.90,
-      );
-    });
-
-    testRequiresValueAndCurrencyTogether('logEcommercePurchase', () {
-      return analytics.logEcommercePurchase(
-        value: 123.90,
-      );
-    });
-
-    testRequiresValueAndCurrencyTogether('logGenerateLead', () {
-      return analytics.logGenerateLead(
-        value: 123.90,
-      );
-    });
-
-    testRequiresValueAndCurrencyTogether('logPresentOffer', () {
-      return analytics.logPresentOffer(
-        itemId: 'test-id',
-        itemName: 'test-name',
-        itemCategory: 'test-category',
-        quantity: 5,
-        value: 123.90,
-      );
-    });
-
-    testRequiresValueAndCurrencyTogether('logPurchaseRefund', () {
-      return analytics.logPurchaseRefund(
-        value: 123.90,
-      );
-    });
-
-    testRequiresValueAndCurrencyTogether('logViewItem', () {
-      return analytics.logViewItem(
-        itemId: 'test-id',
-        itemName: 'test-name',
-        itemCategory: 'test-category',
-        value: 123.90,
-      );
+    group('Non logEvent type API', () {
+      test('setUserProperty rejects invalid names', () async {
+        // invalid character
+        expect(
+          analytics!.setUserProperty(name: 'test-name', value: 'test-value'),
+          throwsArgumentError,
+        );
+        // non-alpha first character
+        expect(
+          analytics!.setUserProperty(name: '0test', value: 'test-value'),
+          throwsArgumentError,
+        );
+        // blank
+        expect(
+          analytics!.setUserProperty(name: '', value: 'test-value'),
+          throwsArgumentError,
+        );
+        // reserved prefix
+        expect(
+          analytics!
+              .setUserProperty(name: 'firebase_test', value: 'test-value'),
+          throwsArgumentError,
+        );
+      });
     });
   });
 }

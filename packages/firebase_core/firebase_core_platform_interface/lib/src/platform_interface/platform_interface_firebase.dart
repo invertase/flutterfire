@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_core_platform_interface;
+part of '../../firebase_core_platform_interface.dart';
 
 /// The interface that implementations of `firebase_core` must extend.
 ///
@@ -29,7 +30,7 @@ abstract class FirebasePlatform extends PlatformInterface {
   static FirebasePlatform _instance = MethodChannelFirebase();
 
   static set instance(FirebasePlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 

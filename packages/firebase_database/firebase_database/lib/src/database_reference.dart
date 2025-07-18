@@ -2,49 +2,49 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_database;
+part of '../firebase_database.dart';
 
 /// DatabaseReference represents a particular location in your Firebase
 /// Database and can be used for reading or writing data to that location.
 ///
 /// This class is the starting point for all Firebase Database operations.
-/// After you’ve obtained your first DatabaseReference via
-/// `FirebaseDatabase.reference()`, you can use it to read data
+/// After you’ve obtained your first `DatabaseReference` via
+/// `FirebaseDatabase.instance.ref()`, you can use it to read data
 /// (ie. `onChildAdded`), write data (ie. `setValue`), and to create new
 /// `DatabaseReference`s (ie. `child`).
 class DatabaseReference extends Query {
-  DatabaseReference._(FirebaseDatabase database, List<String> pathComponents)
-      : super._(database: database, pathComponents: pathComponents);
+  DatabaseReferencePlatform _delegate;
+
+  DatabaseReference._(this._delegate) : super._(_delegate);
 
   /// Gets a DatabaseReference for the location at the specified relative
   /// path. The relative path can either be a simple child key (e.g. ‘fred’) or
   /// a deeper slash-separated path (e.g. ‘fred/name/first’).
   DatabaseReference child(String path) {
-    return DatabaseReference._(_database,
-        (List<String>.from(_pathComponents)..addAll(path.split('/'))));
+    return DatabaseReference._(_delegate.child(path));
   }
 
   /// Gets a DatabaseReference for the parent location. If this instance
   /// refers to the root of your Firebase Database, it has no parent, and
   /// therefore parent() will return null.
-  DatabaseReference? parent() {
-    if (_pathComponents.isEmpty) {
+  DatabaseReference? get parent {
+    final _platformParent = _delegate.parent;
+
+    if (_platformParent == null) {
       return null;
     }
-    return DatabaseReference._(
-      _database,
-      List<String>.from(_pathComponents)..removeLast(),
-    );
+
+    return DatabaseReference._(_platformParent);
   }
 
-  /// Gets a FIRDatabaseReference for the root location.
-  DatabaseReference root() {
-    return DatabaseReference._(_database, <String>[]);
+  /// Gets a [DatabaseReference] for the root location.
+  DatabaseReference get root {
+    return DatabaseReference._(_delegate.root());
   }
 
   /// Gets the last token in a Firebase Database location (e.g. ‘fred’ in
   /// https://SampleChat.firebaseIO-demo.com/users/fred)
-  String get key => _pathComponents.last;
+  String? get key => _delegate.key;
 
   /// Generates a new child location using a unique key and returns a
   /// DatabaseReference to it. This is useful when the children of a Firebase
@@ -54,12 +54,10 @@ class DatabaseReference extends Query {
   /// client-generated timestamp so that the resulting list will be
   /// chronologically-sorted.
   DatabaseReference push() {
-    final String key = PushIdGenerator.generatePushChildName();
-    final List<String> childPath = List<String>.from(_pathComponents)..add(key);
-    return DatabaseReference._(_database, childPath);
+    return DatabaseReference._(_delegate.push());
   }
 
-  /// Write `value` to the location with the specified `priority` if applicable.
+  /// Write a `value` to the location.
   ///
   /// This will overwrite any data at this location and all child locations.
   ///
@@ -71,30 +69,55 @@ class DatabaseReference extends Query {
   ///
   /// Passing null for the new value means all data at this location or any
   /// child location will be deleted.
-  Future<void> set(dynamic value, {dynamic priority}) {
-    return _database._channel.invokeMethod<void>(
-      'DatabaseReference#set',
-      <String, dynamic>{
-        'app': _database.app?.name,
-        'databaseURL': _database.databaseURL,
-        'path': path,
-        'value': value,
-        'priority': priority,
-      },
-    );
+  Future<void> set(Object? value) {
+    return _delegate.set(value);
   }
 
-  /// Update the node with the `value`
-  Future<void> update(Map<String, dynamic> value) {
-    return _database._channel.invokeMethod<void>(
-      'DatabaseReference#update',
-      <String, dynamic>{
-        'app': _database.app?.name,
-        'databaseURL': _database.databaseURL,
-        'path': path,
-        'value': value,
-      },
-    );
+  /// Write a `value` to the location with the specified `priority` if applicable.
+  ///
+  /// This will overwrite any data at this location and all child locations.
+  ///
+  /// Data types that are allowed are String, boolean, int, double, Map, List.
+  ///
+  /// The effect of the write will be visible immediately and the corresponding
+  /// events will be triggered. Synchronization of the data to the Firebase
+  /// Database servers will also be started.
+  ///
+  /// Passing null for the new value means all data at this location or any
+  /// child location will be deleted.
+  /// Note: [priority] can be a [String], [double] or [null] value.
+  Future<void> setWithPriority(Object? value, Object? priority) {
+    assert(priority == null || priority is String || priority is num);
+    return _delegate.setWithPriority(value, priority);
+  }
+
+  /// Writes multiple values to the Database at once.
+  ///
+  /// The values argument contains multiple property-value pairs that will be
+  /// written to the Database together. Each child property can either be a
+  /// simple property (for example, "name") or a relative path (for example,
+  /// "name/first") from the current location to the data to update.
+  ///
+  /// As opposed to the [set] method, [update] can be use to selectively update
+  /// only the referenced properties at the current location
+  /// (instead of replacing all the child properties at the current location).
+  ///
+  /// The effect of the write will be visible immediately, and the corresponding
+  /// events ('value', 'child_added', etc.) will be triggered. Synchronization
+  /// of the data to the Firebase servers will also be started, and the
+  /// returned [Future] will resolve when complete.
+  ///
+  /// A single [update] will generate a single "value" event at the location
+  /// where the [update] was performed, regardless of how many children were modified.
+  ///
+  /// Note that modifying data with [update] will cancel any pending transactions
+  /// at that location, so extreme care should be taken if mixing [update] and
+  /// [runTransaction] to modify the same data.
+  ///
+  /// Passing null to a [Map] value in [update] will remove the value at the specified
+  /// location.
+  Future<void> update(Map<String, Object?> value) {
+    return _delegate.update(value);
   }
 
   /// Sets a priority for the data at this Firebase Database location.
@@ -121,16 +144,11 @@ class DatabaseReference extends Query {
   /// Note that priorities are parsed and ordered as IEEE 754 double-precision
   /// floating-point numbers. Keys are always stored as strings and are treated
   /// as numbers only when they can be parsed as a 32-bit integer.
-  Future<void> setPriority(dynamic priority) async {
-    return _database._channel.invokeMethod<void>(
-      'DatabaseReference#setPriority',
-      <String, dynamic>{
-        'app': _database.app?.name,
-        'databaseURL': _database.databaseURL,
-        'path': path,
-        'priority': priority,
-      },
-    );
+  ///
+  /// Note: [priority] can be a [String], [double] or [null] value.
+  Future<void> setPriority(Object? priority) async {
+    assert(priority == null || priority is String || priority is num);
+    return _delegate.setPriority(priority);
   }
 
   /// Remove the data at this Firebase Database location. Any data at child
@@ -146,76 +164,19 @@ class DatabaseReference extends Query {
   /// Performs an optimistic-concurrency transactional update to the data at
   /// this Firebase Database location.
   Future<TransactionResult> runTransaction(
-      TransactionHandler transactionHandler,
-      {Duration timeout = const Duration(seconds: 5)}) async {
-    assert(timeout.inMilliseconds > 0,
-        'Transaction timeout must be more than 0 milliseconds.');
-
-    final Completer<TransactionResult> completer =
-        Completer<TransactionResult>();
-
-    final int transactionKey = FirebaseDatabase._transactions.isEmpty
-        ? 0
-        : FirebaseDatabase._transactions.keys.last + 1;
-
-    FirebaseDatabase._transactions[transactionKey] = transactionHandler;
-
-    TransactionResult toTransactionResult(Map<dynamic, dynamic> map) {
-      final DatabaseError? databaseError =
-          map['error'] != null ? DatabaseError._(map['error']) : null;
-      final bool committed = map['committed'];
-      final DataSnapshot? dataSnapshot = map['snapshot'] != null
-          ? DataSnapshot._fromJson(map['snapshot'], map['childKeys'])
-          : null;
-
-      FirebaseDatabase._transactions.remove(transactionKey);
-
-      return TransactionResult._(databaseError, committed, dataSnapshot);
-    }
-
-    // TODO(rrousselGit) refactor to async/await
-    // TODO(rrousselGit) what if invokeMethod fails?
-    // ignore: unawaited_futures
-    _database._channel.invokeMethod<void>(
-        'DatabaseReference#runTransaction', <String, dynamic>{
-      'app': _database.app?.name,
-      'databaseURL': _database.databaseURL,
-      'path': path,
-      'transactionKey': transactionKey,
-      'transactionTimeout': timeout.inMilliseconds
-    }).then((dynamic response) {
-      completer.complete(toTransactionResult(response));
-    });
-
-    return completer.future;
+    TransactionHandler transactionHandler, {
+    bool applyLocally = true,
+  }) async {
+    return TransactionResult._(
+      await _delegate.runTransaction(
+        transactionHandler,
+        applyLocally: applyLocally,
+      ),
+    );
   }
 
+  /// Returns an [OnDisconnect] instance.
   OnDisconnect onDisconnect() {
-    return OnDisconnect._(_database, this);
+    return OnDisconnect._(_delegate.onDisconnect());
   }
-}
-
-class ServerValue {
-  static const Map<String, String> timestamp = <String, String>{
-    '.sv': 'timestamp'
-  };
-
-  /// Returns a placeholder value that can be used to atomically increment the
-  /// current database value by the provided delta.
-  static Map<dynamic, dynamic> increment(int delta) {
-    return <dynamic, dynamic>{
-      '.sv': {'increment': delta}
-    };
-  }
-}
-
-typedef TransactionHandler = Future<MutableData> Function(
-  MutableData mutableData,
-);
-
-class TransactionResult {
-  const TransactionResult._(this.error, this.committed, this.dataSnapshot);
-  final DatabaseError? error;
-  final bool committed;
-  final DataSnapshot? dataSnapshot;
 }

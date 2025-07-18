@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -23,6 +24,25 @@ AndroidNotificationPriority convertToAndroidNotificationPriority(
   }
 }
 
+/// Converts an [AndroidNotificationPriority] into it's [int] representation.
+int convertAndroidNotificationPriorityToInt(
+    AndroidNotificationPriority? priority) {
+  switch (priority) {
+    case AndroidNotificationPriority.minimumPriority:
+      return -2;
+    case AndroidNotificationPriority.lowPriority:
+      return -1;
+    case AndroidNotificationPriority.defaultPriority:
+      return 0;
+    case AndroidNotificationPriority.highPriority:
+      return 1;
+    case AndroidNotificationPriority.maximumPriority:
+      return 2;
+    default:
+      return 0;
+  }
+}
+
 /// Converts an [int] into it's [AndroidNotificationVisibility] representation.
 AndroidNotificationVisibility convertToAndroidNotificationVisibility(
     int? visibility) {
@@ -35,6 +55,21 @@ AndroidNotificationVisibility convertToAndroidNotificationVisibility(
       return AndroidNotificationVisibility.public;
     default:
       return AndroidNotificationVisibility.private;
+  }
+}
+
+/// Converts an [AndroidNotificationVisibility] into it's [int] representation.
+int convertAndroidNotificationVisibilityToInt(
+    AndroidNotificationVisibility? visibility) {
+  switch (visibility) {
+    case AndroidNotificationVisibility.secret:
+      return -1;
+    case AndroidNotificationVisibility.private:
+      return 0;
+    case AndroidNotificationVisibility.public:
+      return 1;
+    default:
+      return 0;
   }
 }
 
@@ -97,6 +132,8 @@ NotificationSettings convertToNotificationSettings(Map<String, int> map) {
   return NotificationSettings(
     authorizationStatus:
         convertToAuthorizationStatus(map['authorizationStatus']),
+    timeSensitive: convertToAppleNotificationSetting(map['timeSensitive']),
+    criticalAlert: convertToAppleNotificationSetting(map['criticalAlert']),
     alert: convertToAppleNotificationSetting(map['alert']),
     announcement: convertToAppleNotificationSetting(map['announcement']),
     badge: convertToAppleNotificationSetting(map['badge']),
@@ -106,11 +143,13 @@ NotificationSettings convertToNotificationSettings(Map<String, int> map) {
         convertToAppleNotificationSetting(map['notificationCenter']),
     showPreviews: convertToAppleShowPreviewSetting(map['showPreviews']),
     sound: convertToAppleNotificationSetting(map['sound']),
+    providesAppNotificationSettings: convertToAppleNotificationSetting(
+        map['providesAppNotificationSettings']),
   );
 }
 
-/// Used to return [NotificationSettings] for all Android devices.
-const NotificationSettings androidNotificationSettings = NotificationSettings(
+// Default [NotificationSettings] for platforms which do not require permissions
+const NotificationSettings defaultNotificationSettings = NotificationSettings(
   authorizationStatus: AuthorizationStatus.authorized,
   alert: AppleNotificationSetting.notSupported,
   announcement: AppleNotificationSetting.notSupported,
@@ -120,4 +159,7 @@ const NotificationSettings androidNotificationSettings = NotificationSettings(
   notificationCenter: AppleNotificationSetting.notSupported,
   showPreviews: AppleShowPreviewSetting.notSupported,
   sound: AppleNotificationSetting.notSupported,
+  timeSensitive: AppleNotificationSetting.notSupported,
+  criticalAlert: AppleNotificationSetting.notSupported,
+  providesAppNotificationSettings: AppleNotificationSetting.notSupported,
 );

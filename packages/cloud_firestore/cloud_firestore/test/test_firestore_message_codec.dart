@@ -2,13 +2,12 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 import 'package:cloud_firestore_platform_interface/src/method_channel/method_channel_firestore.dart';
 import 'package:cloud_firestore_platform_interface/src/method_channel/method_channel_query.dart';
+import 'package:cloud_firestore_platform_interface/src/method_channel/utils/firestore_message_codec.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-
-import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
-import 'package:cloud_firestore_platform_interface/src/method_channel/utils/firestore_message_codec.dart';
 
 /// This codec is able to decode FieldValues.
 /// This ability is only required in tests, hence why
@@ -36,36 +35,52 @@ class TestFirestoreMessageCodec extends FirestoreMessageCodec {
       case _kArrayUnion:
         final List<dynamic> value = readValue(buffer)! as List<dynamic>;
         return FieldValuePlatform(
-            FieldValueFactoryPlatform.instance.arrayUnion(value));
+          FieldValueFactoryPlatform.instance.arrayUnion(value),
+        );
       case _kArrayRemove:
         final List<dynamic> value = readValue(buffer)! as List<dynamic>;
         return FieldValuePlatform(
-            FieldValueFactoryPlatform.instance.arrayRemove(value));
+          FieldValueFactoryPlatform.instance.arrayRemove(value),
+        );
       case _kDelete:
         return FieldValuePlatform(FieldValueFactoryPlatform.instance.delete());
       case _kServerTimestamp:
         return FieldValuePlatform(
-            FieldValueFactoryPlatform.instance.serverTimestamp());
+          FieldValueFactoryPlatform.instance.serverTimestamp(),
+        );
       case _kIncrementDouble:
         final double value = readValue(buffer)! as double;
         return FieldValuePlatform(
-            FieldValueFactoryPlatform.instance.increment(value));
+          FieldValueFactoryPlatform.instance.increment(value),
+        );
       case _kIncrementInteger:
         final int value = readValue(buffer)! as int;
         return FieldValuePlatform(
-            FieldValueFactoryPlatform.instance.increment(value));
+          FieldValueFactoryPlatform.instance.increment(value),
+        );
       case _kFirestoreInstance:
         String appName = readValue(buffer)! as String;
+        String databaseId = readValue(buffer)! as String;
         readValue(buffer);
         final FirebaseApp app = Firebase.app(appName);
-        return MethodChannelFirebaseFirestore(app: app);
+        return MethodChannelFirebaseFirestore(
+          app: app,
+          databaseId: databaseId,
+        );
       case _kFirestoreQuery:
         String appName = readValue(buffer)! as String;
         Map<dynamic, dynamic> values =
             readValue(buffer)! as Map<dynamic, dynamic>;
         final FirebaseApp app = Firebase.app(appName);
         return MethodChannelQuery(
-            MethodChannelFirebaseFirestore(app: app), values['path']);
+          MethodChannelFirebaseFirestore(app: app, databaseId: '(default)'),
+          values['path'],
+          FirestorePigeonFirebaseApp(
+            appName: "['DEFAULT']",
+            settings: PigeonFirebaseSettings(ignoreUndefinedProperties: true),
+            databaseURL: '',
+          ),
+        );
       case _kFirestoreSettings:
         readValue(buffer);
         return const Settings();

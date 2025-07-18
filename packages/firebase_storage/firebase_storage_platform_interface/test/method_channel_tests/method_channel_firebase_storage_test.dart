@@ -1,22 +1,21 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'dart:async';
-
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter_test/flutter_test.dart';
-
 import 'package:firebase_storage_platform_interface/firebase_storage_platform_interface.dart';
 import 'package:firebase_storage_platform_interface/src/method_channel/method_channel_firebase_storage.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import '../mock.dart';
 
 void main() {
   setupFirebaseStorageMocks();
 
-  FirebaseStoragePlatform? storage;
-  FirebaseApp? app;
-  FirebaseApp? secondaryApp;
+  late FirebaseStoragePlatform storage;
+  late FirebaseApp app;
+  late FirebaseApp secondaryApp;
 
   String kBucket = 'foo';
 
@@ -33,13 +32,13 @@ void main() {
         ),
       );
 
-      storage = MethodChannelFirebaseStorage(app: app!, bucket: '');
+      storage = MethodChannelFirebaseStorage(app: app, bucket: '');
     });
 
     group('constructor', () {
       test('should create an instance with no args', () {
         MethodChannelFirebaseStorage test =
-            MethodChannelFirebaseStorage(app: app!, bucket: kBucket);
+            MethodChannelFirebaseStorage(app: app, bucket: kBucket);
         expect(test.app, equals(Firebase.app()));
       });
 
@@ -50,7 +49,7 @@ void main() {
       });
       test('create an instance with a secondary app', () {
         MethodChannelFirebaseStorage test =
-            MethodChannelFirebaseStorage(app: secondaryApp!, bucket: '');
+            MethodChannelFirebaseStorage(app: secondaryApp, bucket: '');
         expect(test.app, equals(secondaryApp));
       });
 
@@ -58,7 +57,7 @@ void main() {
         MethodChannelFirebaseStorage test1 =
             MethodChannelFirebaseStorage(app: Firebase.app(), bucket: '');
         MethodChannelFirebaseStorage test2 =
-            MethodChannelFirebaseStorage(app: secondaryApp!, bucket: '');
+            MethodChannelFirebaseStorage(app: secondaryApp, bucket: '');
         expect(test1.app, equals(Firebase.app()));
         expect(test2.app, equals(secondaryApp));
       });
@@ -79,10 +78,10 @@ void main() {
       nextMockHandleId;
     });
 
-    test('taskObservers', () {
-      expect(MethodChannelFirebaseStorage.taskObservers,
-          isInstanceOf<Map<int, StreamController<TaskSnapshotPlatform>>>());
-    });
+    // test('taskObservers', () {
+    //   expect(MethodChannelFirebaseStorage.taskObservers,
+    //       isInstanceOf<Map<int, StreamController<TaskSnapshotPlatform>>>());
+    // });
 
     group('delegateFor()', () {
       test('returns a [FirebaseStoragePlatform] with arguments', () {
@@ -95,7 +94,7 @@ void main() {
 
     group('ref', () {
       test('should return a [ReferencePlatform]', () {
-        final result = storage!.ref('foo.bar');
+        final result = storage.ref('foo.bar');
         expect(result, isInstanceOf<ReferencePlatform>());
       });
     });

@@ -1,6 +1,10 @@
-package io.flutter.plugins.firebase.auth;
+/*
+ * Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+ * for details. All rights reserved. Use of this source code is governed by a
+ * BSD-style license that can be found in the LICENSE file.
+ */
 
-import static io.flutter.plugins.firebase.auth.FlutterFirebaseAuthPlugin.parseFirebaseUser;
+package io.flutter.plugins.firebase.auth;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuth.IdTokenListener;
@@ -9,6 +13,7 @@ import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class IdTokenChannelStreamHandler implements StreamHandler {
 
@@ -24,14 +29,22 @@ public class IdTokenChannelStreamHandler implements StreamHandler {
     Map<String, Object> event = new HashMap<>();
     event.put(Constants.APP_NAME, firebaseAuth.getApp().getName());
 
+    final AtomicBoolean initialAuthState = new AtomicBoolean(true);
+
     idTokenListener =
         auth -> {
+          if (initialAuthState.get()) {
+            initialAuthState.set(false);
+            return;
+          }
+
           FirebaseUser user = auth.getCurrentUser();
 
           if (user == null) {
             event.put(Constants.USER, null);
           } else {
-            event.put(Constants.USER, parseFirebaseUser(user));
+            event.put(
+                Constants.USER, PigeonParser.manuallyToList(PigeonParser.parseFirebaseUser(user)));
           }
 
           events.success(event);

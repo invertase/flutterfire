@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -10,7 +11,7 @@ import 'interop/messaging.dart';
 ///
 /// See https://developer.mozilla.org/en-US/docs/Web/API/Notification/requestPermission
 /// for more information.
-AuthorizationStatus convertToAuthorizationStatus(String status) {
+AuthorizationStatus convertToAuthorizationStatus(String? status) {
   switch (status) {
     case 'granted':
       return AuthorizationStatus.authorized;
@@ -24,7 +25,7 @@ AuthorizationStatus convertToAuthorizationStatus(String status) {
 }
 
 /// Returns a [NotificationSettings] instance for all Web platforms devices.
-NotificationSettings getNotificationSettings(String status) {
+NotificationSettings getNotificationSettings(String? status) {
   return NotificationSettings(
     authorizationStatus: convertToAuthorizationStatus(status),
     alert: AppleNotificationSetting.notSupported,
@@ -35,6 +36,9 @@ NotificationSettings getNotificationSettings(String status) {
     notificationCenter: AppleNotificationSetting.notSupported,
     showPreviews: AppleShowPreviewSetting.notSupported,
     sound: AppleNotificationSetting.notSupported,
+    timeSensitive: AppleNotificationSetting.notSupported,
+    criticalAlert: AppleNotificationSetting.notSupported,
+    providesAppNotificationSettings: AppleNotificationSetting.notSupported,
   );
 }
 
@@ -71,7 +75,7 @@ Map<String, dynamic> messagePayloadToMap(MessagePayload messagePayload) {
     'contentAvailable': null,
     'data': data,
     'from': messagePayload.from,
-    'messageId': null,
+    'messageId': messagePayload.messageId,
     'mutableContent': null,
     'notification': messagePayload.notification == null
         ? null

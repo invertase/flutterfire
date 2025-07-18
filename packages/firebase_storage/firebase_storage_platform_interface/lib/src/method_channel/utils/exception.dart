@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -10,25 +11,34 @@ import 'package:flutter/services.dart';
 /// Catches a [PlatformException] and returns an [Exception].
 ///
 /// If the [Exception] is a [PlatformException], a [FirebaseException] is returned.
-Exception convertPlatformException(dynamic exception,
-    [StackTrace? stackTrace]) {
+Never convertPlatformException(
+  dynamic exception,
+  StackTrace stackTrace,
+) {
   if (exception is! Exception || exception is! PlatformException) {
-    return exception;
+    Error.throwWithStackTrace(exception, stackTrace);
   }
 
-  return platformExceptionToFirebaseException(exception, stackTrace);
+  Error.throwWithStackTrace(
+    platformExceptionToFirebaseException(exception, stackTrace),
+    stackTrace,
+  );
 }
 
 /// Catches a [PlatformException] and converts it into a [FirebaseException] if
 /// it was intentionally caught on the native platform.
-Future<T> catchFuturePlatformException<T>(Object exception,
-    [StackTrace? stackTrace]) {
+Future<T> catchFuturePlatformException<T>(
+  Object exception,
+  StackTrace stackTrace,
+) {
   if (exception is! Exception || exception is! PlatformException) {
     return Future.error(exception, stackTrace);
   }
 
   return Future<T>.error(
-      platformExceptionToFirebaseException(exception, stackTrace));
+    platformExceptionToFirebaseException(exception, stackTrace),
+    stackTrace,
+  );
 }
 
 /// Converts a [PlatformException] into a [FirebaseException].
@@ -37,21 +47,12 @@ Future<T> catchFuturePlatformException<T>(Object exception,
 /// `details` of the exception exist. Firebase returns specific codes and messages
 /// which can be converted into user friendly exceptions.
 FirebaseException platformExceptionToFirebaseException(
-    PlatformException platformException,
-    [StackTrace? stackTrace]) {
-  Map<String, String>? details = platformException.details != null
-      ? Map<String, String>.from(platformException.details)
-      : null;
-
-  String code = 'unknown';
-  String message = platformException.message ?? '';
-
-  if (details != null) {
-    code = details['code'] ?? code;
-    message = details['message'] ?? message;
-  }
-
+  PlatformException platformException,
+  StackTrace stackTrace,
+) {
   // TODO(ehesp): Add stack trace support when it lands
   return FirebaseException(
-      plugin: 'firebase_storage', code: code, message: message);
+      plugin: 'firebase_storage',
+      code: platformException.code,
+      message: platformException.message);
 }

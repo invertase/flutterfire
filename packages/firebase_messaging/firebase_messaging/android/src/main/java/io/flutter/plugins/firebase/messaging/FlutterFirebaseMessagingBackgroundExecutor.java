@@ -10,14 +10,16 @@ import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Parcel;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import com.google.firebase.messaging.RemoteMessage;
+import io.flutter.FlutterInjector;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.FlutterShellArgs;
 import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.embedding.engine.dart.DartExecutor.DartCallback;
-import io.flutter.embedding.engine.plugins.shim.ShimPluginRegistry;
+import io.flutter.embedding.engine.loader.FlutterLoader;
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
@@ -29,7 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * An background execution abstraction which handles initializing a background isolate running a
  * callback dispatcher, used to invoke Dart callbacks while backgrounded.
@@ -39,8 +40,6 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   private static final String CALLBACK_HANDLE_KEY = "callback_handle";
   private static final String USER_CALLBACK_HANDLE_KEY = "user_callback_handle";
 
-  private static io.flutter.plugin.common.PluginRegistry.PluginRegistrantCallback
-      pluginRegistrantCallback;
   private final AtomicBoolean isCallbackDispatcherReady = new AtomicBoolean(false);
   /**
    * The {@link MethodChannel} that connects the Android side of this plugin with the background
@@ -51,24 +50,15 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   private FlutterEngine backgroundFlutterEngine;
 
   /**
-   * Sets the {@code io.flutter.plugin.common.PluginRegistry.PluginRegistrantCallback} used to
-   * register plugins with the newly spawned isolate.
-   *
-   * <p>Note: this is only necessary for applications using the V1 engine embedding API as plugins
-   * are automatically registered via reflection in the V2 engine embedding API. If not set,
-   * background message callbacks will not be able to utilize functionality from other plugins.
-   */
-  public static void setPluginRegistrant(
-      io.flutter.plugin.common.PluginRegistry.PluginRegistrantCallback callback) {
-    pluginRegistrantCallback = callback;
-  }
-
-  /**
    * Sets the Dart callback handle for the Dart method that is responsible for initializing the
    * background Dart isolate, preparing it to receive Dart callback tasks requests.
    */
   public static void setCallbackDispatcher(long callbackHandle) {
     Context context = ContextHolder.getApplicationContext();
+    if (context == null) {
+      Log.e(TAG, "Context is null, cannot continue.");
+      return;
+    }
     SharedPreferences prefs =
         context.getSharedPreferences(FlutterFirebaseMessagingUtils.SHARED_PREFERENCES_KEY, 0);
     prefs.edit().putLong(CALLBACK_HANDLE_KEY, callbackHandle).apply();
@@ -109,24 +99,6 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
   /**
    * Starts running a background Dart isolate within a new {@link FlutterEngine} using a previously
    * used entrypoint.
-   *
-   * <p>The isolate is configured as follows:
-   *
-   * <ul>
-   *   <li>Bundle Path: {@code io.flutter.view.FlutterMain.findAppBundlePath(context)}.
-   *   <li>Entrypoint: The Dart method used the last time this plugin was initialized in the
-   *       foreground.
-   *   <li>Run args: none.
-   * </ul>
-   *
-   * <p>Preconditions:
-   *
-   * <ul>
-   *   <li>The given callback must correspond to a registered Dart callback. If the handle does not
-   *       resolve to a Dart callback then this method does nothing.
-   *   <li>A static {@link #pluginRegistrantCallback} must exist, otherwise a {@link
-   *       PluginRegistrantException} will be thrown.
-   * </ul>
    */
   public void startBackgroundIsolate() {
     if (isNotRunning()) {
@@ -137,42 +109,24 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
     }
   }
 
-  /**
-   * Starts running a background Dart isolate within a new {@link FlutterEngine}.
-   *
-   * <p>The isolate is configured as follows:
-   *
-   * <ul>
-   *   <li>Bundle Path: {@code io.flutter.view.FlutterMain.findAppBundlePath(context)}.
-   *   <li>Entrypoint: The Dart method represented by {@code callbackHandle}.
-   *   <li>Run args: none.
-   * </ul>
-   *
-   * <p>Preconditions:
-   *
-   * <ul>
-   *   <li>The given {@code callbackHandle} must correspond to a registered Dart callback. If the
-   *       handle does not resolve to a Dart callback then this method does nothing.
-   *   <li>A static {@link #pluginRegistrantCallback} must exist, otherwise a {@link
-   *       PluginRegistrantException} will be thrown.
-   * </ul>
-   */
+  /** Starts running a background Dart isolate within a new {@link FlutterEngine}. */
   public void startBackgroundIsolate(long callbackHandle, FlutterShellArgs shellArgs) {
     if (backgroundFlutterEngine != null) {
       Log.e(TAG, "Background isolate already started.");
       return;
     }
 
+    FlutterLoader loader = FlutterInjector.instance().flutterLoader();
     Handler mainHandler = new Handler(Looper.getMainLooper());
     Runnable myRunnable =
         () -> {
-          io.flutter.view.FlutterMain.startInitialization(ContextHolder.getApplicationContext());
-          io.flutter.view.FlutterMain.ensureInitializationCompleteAsync(
+          loader.startInitialization(ContextHolder.getApplicationContext());
+          loader.ensureInitializationCompleteAsync(
               ContextHolder.getApplicationContext(),
               null,
               mainHandler,
               () -> {
-                String appBundlePath = io.flutter.view.FlutterMain.findAppBundlePath();
+                String appBundlePath = loader.findAppBundlePath();
                 AssetManager assets = ContextHolder.getApplicationContext().getAssets();
                 if (isNotRunning()) {
                   if (shellArgs != null) {
@@ -193,19 +147,19 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
                   // lookup will fail.
                   FlutterCallbackInformation flutterCallback =
                       FlutterCallbackInformation.lookupCallbackInformation(callbackHandle);
+
+                  if (flutterCallback == null) {
+                    Log.e(TAG, "Failed to find registered callback");
+                    return;
+                  }
+
                   DartExecutor executor = backgroundFlutterEngine.getDartExecutor();
                   initializeMethodChannel(executor);
+
                   DartCallback dartCallback =
                       new DartCallback(assets, appBundlePath, flutterCallback);
 
                   executor.executeDartCallback(dartCallback);
-
-                  // The pluginRegistrantCallback should only be set in the V1 embedding as
-                  // plugin registration is done via reflection in the V2 embedding.
-                  if (pluginRegistrantCallback != null) {
-                    pluginRegistrantCallback.registerWith(
-                        new ShimPluginRegistry(backgroundFlutterEngine));
-                  }
                 }
               });
         };
@@ -251,24 +205,38 @@ public class FlutterFirebaseMessagingBackgroundExecutor implements MethodCallHan
             }
           };
     }
+    // RemoteMessage is passed as byte array. Check it exists first
+    byte[] parcelBytes =
+        intent.getByteArrayExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE);
+    if (parcelBytes != null) {
+      Parcel parcel = Parcel.obtain();
+      try {
+        // This converts raw byte array into data and request this happens on the entire array
+        parcel.unmarshall(parcelBytes, 0, parcelBytes.length);
+        // Sets the starting position of the data which is 0 on array
+        parcel.setDataPosition(0);
 
-    // Handle the message event in Dart.
-    RemoteMessage remoteMessage =
-        intent.getParcelableExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE);
-    if (remoteMessage != null) {
-      Map<String, Object> remoteMessageMap =
-          FlutterFirebaseMessagingUtils.remoteMessageToMap(remoteMessage);
-      backgroundChannel.invokeMethod(
-          "MessagingBackground#onMessage",
-          new HashMap<String, Object>() {
-            {
-              put("userCallbackHandle", getUserCallbackHandle());
-              put("message", remoteMessageMap);
-            }
-          },
-          result);
+        // Now recreate the RemoteMessage from the Parcel
+        RemoteMessage remoteMessage = RemoteMessage.CREATOR.createFromParcel(parcel);
+        Map<String, Object> remoteMessageMap =
+            FlutterFirebaseMessagingUtils.remoteMessageToMap(remoteMessage);
+
+        backgroundChannel.invokeMethod(
+            "MessagingBackground#onMessage",
+            new HashMap<String, Object>() {
+              {
+                put("userCallbackHandle", getUserCallbackHandle());
+                put("message", remoteMessageMap);
+              }
+            },
+            result);
+
+      } finally {
+        // Recycle the Parcel when done
+        parcel.recycle();
+      }
     } else {
-      Log.e(TAG, "RemoteMessage instance not found in Intent.");
+      Log.e(TAG, "RemoteMessage byte array not found in Intent.");
     }
   }
 

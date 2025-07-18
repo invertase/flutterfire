@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -5,7 +6,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_storage_platform_interface/firebase_storage_platform_interface.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -144,7 +144,7 @@ void main() {
         verify(kMockStoragePlatform.ref(testPath));
       });
 
-      // https://github.com/FirebaseExtended/flutterfire/issues/5673
+      // https://github.com/firebase/flutterfire/issues/5673
       test('verify delegate method is called for http urls with + symbol', () {
         const String customBucket = 'test.appspot.com';
         const String testPath = 'foo+bar/file.gif';
@@ -165,6 +165,34 @@ void main() {
 
         expect(ref, isA<Reference>());
         verify(kMockStoragePlatform.ref(testPath));
+      });
+
+      test('verify special characters are allowed in http path', () {
+        const String customBucket = 'test.appspot.com';
+        const String testPath = '[!@+= ^&*_+-= {};,.<> ].jpg';
+        const String url =
+            'https://firebasestorage.googleapis.com/v0/b/$customBucket/o/$testPath?alt=media';
+
+        final ref = storage.refFromURL(url);
+
+        expect(ref, isA<Reference>());
+        verify(kMockStoragePlatform.ref(testPath));
+      });
+    });
+
+    group('useStorageEmulator', () {
+      test('throws AssertionError when host is empty', () {
+        expect(() => storage.useStorageEmulator('', 123), throwsAssertionError);
+      });
+
+      test('throws AssertionError when port is negative', () {
+        expect(
+            () => storage.useStorageEmulator('foo', -10), throwsAssertionError);
+      });
+
+      test('verify delegate method is called with args', () {
+        storage.useStorageEmulator('foo', 123);
+        verify(kMockStoragePlatform.useStorageEmulator('foo', 123));
       });
     });
 
@@ -199,7 +227,7 @@ void main() {
       test('returns the correct value', () {
         expect(
           storage.hashCode,
-          hashValues(app.name, kBucket.replaceFirst('gs://', '')),
+          Object.hash(app.name, kBucket.replaceFirst('gs://', '')),
         );
       });
     });

@@ -1,6 +1,10 @@
-package io.flutter.plugins.firebase.auth;
+/*
+ * Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+ * for details. All rights reserved. Use of this source code is governed by a
+ * BSD-style license that can be found in the LICENSE file.
+ */
 
-import static io.flutter.plugins.firebase.auth.FlutterFirebaseAuthPlugin.parseFirebaseUser;
+package io.flutter.plugins.firebase.auth;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuth.AuthStateListener;
@@ -39,7 +43,8 @@ public class AuthStateChannelStreamHandler implements StreamHandler {
           if (user == null) {
             event.put(Constants.USER, null);
           } else {
-            event.put(Constants.USER, parseFirebaseUser(user));
+            event.put(
+                Constants.USER, PigeonParser.manuallyToList(PigeonParser.parseFirebaseUser(user)));
           }
 
           events.success(event);

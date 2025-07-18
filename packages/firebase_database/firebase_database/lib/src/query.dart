@@ -2,168 +2,172 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_database;
+part of '../firebase_database.dart';
 
 /// Represents a query over the data at a particular location.
 class Query {
-  Query._({
-    required FirebaseDatabase database,
-    required List<String> pathComponents,
-    Map<String, dynamic>? parameters,
-  })  : _database = database,
-        _pathComponents = pathComponents,
-        _parameters = parameters ?? const <String, dynamic>{};
+  Query._(this._queryDelegate, [QueryModifiers? modifiers])
+      : _modifiers = modifiers ?? QueryModifiers([]) {
+    QueryPlatform.verify(_queryDelegate);
+  }
 
-  final FirebaseDatabase _database;
-  final List<String> _pathComponents;
-  final Map<String, dynamic> _parameters;
+  final QueryPlatform _queryDelegate;
+
+  final QueryModifiers _modifiers;
+
+  /// Obtains a [DatabaseReference] corresponding to this query's location.
+  DatabaseReference get ref => DatabaseReference._(_queryDelegate.ref);
+
+  /// Gets the most up-to-date result for this query.
+  Future<DataSnapshot> get() async {
+    return DataSnapshot._(await _queryDelegate.get(_modifiers));
+  }
 
   /// Slash-delimited path representing the database location of this query.
-  String get path => _pathComponents.join('/');
+  String get path => _queryDelegate.path;
 
-  Query _copyWithParameters(Map<String, dynamic> parameters) {
-    return Query._(
-      database: _database,
-      pathComponents: _pathComponents,
-      parameters: Map<String, dynamic>.unmodifiable(
-        Map<String, dynamic>.from(_parameters)..addAll(parameters),
-      ),
-    );
+  /// Listens for exactly one event of the specified event type, and then stops listening.
+  /// Defaults to [DatabaseEventType.value] if no [eventType] provided.
+  Future<DatabaseEvent> once([
+    DatabaseEventType eventType = DatabaseEventType.value,
+  ]) async {
+    switch (eventType) {
+      case DatabaseEventType.childAdded:
+        return DatabaseEvent._(
+          await _queryDelegate.onChildAdded(_modifiers).first,
+        );
+      case DatabaseEventType.childRemoved:
+        return DatabaseEvent._(
+          await _queryDelegate.onChildRemoved(_modifiers).first,
+        );
+      case DatabaseEventType.childChanged:
+        return DatabaseEvent._(
+          await _queryDelegate.onChildChanged(_modifiers).first,
+        );
+      case DatabaseEventType.childMoved:
+        return DatabaseEvent._(
+          await _queryDelegate.onChildMoved(_modifiers).first,
+        );
+      case DatabaseEventType.value:
+        return DatabaseEvent._(await _queryDelegate.onValue(_modifiers).first);
+    }
   }
-
-  Map<String, dynamic> buildArguments() {
-    return Map<String, dynamic>.from(_parameters)
-      ..addAll(<String, dynamic>{
-        'path': path,
-      });
-  }
-
-  Stream<Event> _observe(_EventType eventType) {
-    late Future<int> _handle;
-    // It's fine to let the StreamController be garbage collected once all the
-    // subscribers have cancelled; this analyzer warning is safe to ignore.
-    late StreamController<Event> controller; // ignore: close_sinks
-    controller = StreamController<Event>.broadcast(
-      onListen: () {
-        _handle = _database._channel.invokeMethod<int>(
-          'Query#observe',
-          <String, dynamic>{
-            'app': _database.app?.name,
-            'databaseURL': _database.databaseURL,
-            'path': path,
-            'parameters': _parameters,
-            'eventType': eventType.toString(),
-          },
-        ).then<int>((dynamic result) => result);
-        _handle.then((int handle) {
-          FirebaseDatabase._observers[handle] = controller;
-        });
-      },
-      onCancel: () {
-        _handle.then((int handle) async {
-          await _database._channel.invokeMethod<int>(
-            'Query#removeObserver',
-            <String, dynamic>{
-              'app': _database.app?.name,
-              'databaseURL': _database.databaseURL,
-              'path': path,
-              'parameters': _parameters,
-              'handle': handle,
-            },
-          );
-          FirebaseDatabase._observers.remove(handle);
-        });
-      },
-    );
-    return controller.stream;
-  }
-
-  /// Listens for a single value event and then stops listening.
-  Future<DataSnapshot> once() async => (await onValue.first).snapshot;
 
   /// Fires when children are added.
-  Stream<Event> get onChildAdded => _observe(_EventType.childAdded);
+  Stream<DatabaseEvent> get onChildAdded =>
+      _queryDelegate.onChildAdded(_modifiers).map(DatabaseEvent._);
 
   /// Fires when children are removed. `previousChildKey` is null.
-  Stream<Event> get onChildRemoved => _observe(_EventType.childRemoved);
+  Stream<DatabaseEvent> get onChildRemoved =>
+      _queryDelegate.onChildRemoved(_modifiers).map(DatabaseEvent._);
 
   /// Fires when children are changed.
-  Stream<Event> get onChildChanged => _observe(_EventType.childChanged);
+  Stream<DatabaseEvent> get onChildChanged =>
+      _queryDelegate.onChildChanged(_modifiers).map(DatabaseEvent._);
 
   /// Fires when children are moved.
-  Stream<Event> get onChildMoved => _observe(_EventType.childMoved);
+  Stream<DatabaseEvent> get onChildMoved =>
+      _queryDelegate.onChildMoved(_modifiers).map(DatabaseEvent._);
 
   /// Fires when the data at this location is updated. `previousChildKey` is null.
-  Stream<Event> get onValue => _observe(_EventType.value);
+  Stream<DatabaseEvent> get onValue =>
+      _queryDelegate.onValue(_modifiers).map(DatabaseEvent._);
 
   /// Create a query constrained to only return child nodes with a value greater
   /// than or equal to the given value, using the given orderBy directive or
   /// priority as default, and optionally only child nodes with a key greater
   /// than or equal to the given key.
-  Query startAt(dynamic value, {String? key}) {
-    assert(!_parameters.containsKey('startAt'));
-    assert(value is String ||
-        value is bool ||
-        value is double ||
-        value is int ||
-        value == null);
-    final Map<String, dynamic> parameters = <String, dynamic>{'startAt': value};
-    if (key != null) parameters['startAtKey'] = key;
-    return _copyWithParameters(parameters);
+  Query startAt(Object? value, {String? key}) {
+    return Query._(
+      _queryDelegate,
+      _modifiers.start(StartCursorModifier.startAt(value, key)),
+    );
+  }
+
+  /// Creates a [Query] with the specified starting point (exclusive).
+  /// Using [startAt], [startAfter], [endBefore], [endAt] and [equalTo]
+  /// allows you to choose arbitrary starting and ending points for your
+  /// queries.
+  ///
+  /// The starting point is exclusive.
+  ///
+  /// If only a value is provided, children with a value greater than
+  /// the specified value will be included in the query.
+  /// If a key is specified, then children must have a value greater than
+  /// or equal to the specified value and a key name greater than
+  /// the specified key.
+  Query startAfter(Object? value, {String? key}) {
+    return Query._(
+      _queryDelegate,
+      _modifiers.start(StartCursorModifier.startAfter(value, key)),
+    );
   }
 
   /// Create a query constrained to only return child nodes with a value less
   /// than or equal to the given value, using the given orderBy directive or
   /// priority as default, and optionally only child nodes with a key less
   /// than or equal to the given key.
-  Query endAt(dynamic value, {String? key}) {
-    assert(!_parameters.containsKey('endAt'));
-    assert(value is String ||
-        value is bool ||
-        value is double ||
-        value is int ||
-        value == null);
-    final Map<String, dynamic> parameters = <String, dynamic>{'endAt': value};
-    if (key != null) parameters['endAtKey'] = key;
-    return _copyWithParameters(parameters);
+  Query endAt(Object? value, {String? key}) {
+    return Query._(
+      _queryDelegate,
+      _modifiers.end(EndCursorModifier.endAt(value, key)),
+    );
+  }
+
+  /// Creates a [Query] with the specified ending point (exclusive)
+  /// The ending point is exclusive. If only a value is provided,
+  /// children with a value less than the specified value will be included in
+  /// the query. If a key is specified, then children must have a value lesss
+  /// than or equal to the specified value and a key name less than the
+  /// specified key.
+  Query endBefore(Object? value, {String? key}) {
+    return Query._(
+      _queryDelegate,
+      _modifiers.end(EndCursorModifier.endBefore(value, key)),
+    );
   }
 
   /// Create a query constrained to only return child nodes with the given
   /// `value` (and `key`, if provided).
   ///
   /// If a key is provided, there is at most one such child as names are unique.
-  Query equalTo(dynamic value, {String? key}) {
-    assert(!_parameters.containsKey('equalTo'));
-    assert(value is String ||
-        value is bool ||
-        value is double ||
-        value is int ||
-        value == null);
-    final Map<String, dynamic> parameters = <String, dynamic>{'equalTo': value};
-    if (key != null) parameters['equalToKey'] = key;
-    return _copyWithParameters(parameters);
+  Query equalTo(Object? value, {String? key}) {
+    return Query._(
+      _queryDelegate,
+      _modifiers
+          .start(StartCursorModifier.startAt(value, key))
+          .end(EndCursorModifier.endAt(value, key)),
+    );
   }
 
   /// Create a query with limit and anchor it to the start of the window.
   Query limitToFirst(int limit) {
-    assert(!_parameters.containsKey('limitToFirst'));
-    return _copyWithParameters(<String, dynamic>{'limitToFirst': limit});
+    return Query._(
+      _queryDelegate,
+      _modifiers.limit(LimitModifier.limitToFirst(limit)),
+    );
   }
 
   /// Create a query with limit and anchor it to the end of the window.
   Query limitToLast(int limit) {
-    assert(!_parameters.containsKey('limitToLast'));
-    return _copyWithParameters(<String, dynamic>{'limitToLast': limit});
+    return Query._(
+      _queryDelegate,
+      _modifiers.limit(LimitModifier.limitToLast(limit)),
+    );
   }
 
-  /// Generate a view of the data sorted by values of a particular child key.
+  /// Generate a view of the data sorted by values of a particular child path.
   ///
   /// Intended to be used in combination with [startAt], [endAt], or
   /// [equalTo].
-  Query orderByChild(String key) {
-    assert(!_parameters.containsKey('orderBy'));
-    return _copyWithParameters(
-      <String, dynamic>{'orderBy': 'child', 'orderByChildKey': key},
+  Query orderByChild(String path) {
+    assert(
+      path.isNotEmpty,
+      'The key cannot be empty. Use `orderByValue` instead',
+    );
+    return Query._(
+      _queryDelegate,
+      _modifiers.order(OrderModifier.orderByChild(path)),
     );
   }
 
@@ -172,8 +176,12 @@ class Query {
   /// Intended to be used in combination with [startAt], [endAt], or
   /// [equalTo].
   Query orderByKey() {
-    assert(!_parameters.containsKey('orderBy'));
-    return _copyWithParameters(<String, dynamic>{'orderBy': 'key'});
+    return Query._(
+      _queryDelegate,
+      _modifiers.order(
+        OrderModifier.orderByKey(),
+      ),
+    );
   }
 
   /// Generate a view of the data sorted by value.
@@ -181,8 +189,12 @@ class Query {
   /// Intended to be used in combination with [startAt], [endAt], or
   /// [equalTo].
   Query orderByValue() {
-    assert(!_parameters.containsKey('orderBy'));
-    return _copyWithParameters(<String, dynamic>{'orderBy': 'value'});
+    return Query._(
+      _queryDelegate,
+      _modifiers.order(
+        OrderModifier.orderByValue(),
+      ),
+    );
   }
 
   /// Generate a view of the data sorted by priority.
@@ -190,28 +202,19 @@ class Query {
   /// Intended to be used in combination with [startAt], [endAt], or
   /// [equalTo].
   Query orderByPriority() {
-    assert(!_parameters.containsKey('orderBy'));
-    return _copyWithParameters(<String, dynamic>{'orderBy': 'priority'});
+    return Query._(
+      _queryDelegate,
+      _modifiers.order(
+        OrderModifier.orderByPriority(),
+      ),
+    );
   }
-
-  /// Obtains a DatabaseReference corresponding to this query's location.
-  DatabaseReference reference() =>
-      DatabaseReference._(_database, _pathComponents);
 
   /// By calling keepSynced(true) on a location, the data for that location will
   /// automatically be downloaded and kept in sync, even when no listeners are
   /// attached for that location. Additionally, while a location is kept synced,
   /// it will not be evicted from the persistent disk cache.
   Future<void> keepSynced(bool value) {
-    return _database._channel.invokeMethod<void>(
-      'Query#keepSynced',
-      <String, dynamic>{
-        'app': _database.app?.name,
-        'databaseURL': _database.databaseURL,
-        'path': path,
-        'parameters': _parameters,
-        'value': value
-      },
-    );
+    return _queryDelegate.keepSynced(_modifiers, value);
   }
 }

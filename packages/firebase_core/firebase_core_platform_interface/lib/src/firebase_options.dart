@@ -1,9 +1,10 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // ignore_for_file: deprecated_member_use_from_same_package
-part of firebase_core_platform_interface;
+part of '../firebase_core_platform_interface.dart';
 
 /// The options used to configure a Firebase app.
 ///
@@ -51,35 +52,65 @@ class FirebaseOptions {
     this.appGroupId,
   });
 
-  /// Named constructor to create [FirebaseOptions] from a Map.
+  /// Named constructor to create [FirebaseOptions] from a the response of Pigeon channel.
   ///
   /// This constructor is used when platforms cannot directly return a
   /// [FirebaseOptions] instance, for example when data is sent back from a
   /// [MethodChannel].
-  FirebaseOptions.fromMap(Map<dynamic, dynamic> map)
-      : assert(map['apiKey'] != null, "'apiKey' cannot be null."),
-        assert(map['appId'] != null, "'appId' cannot be null."),
-        assert(map['messagingSenderId'] != null,
-            "'messagingSenderId' cannot be null."),
-        assert(map['projectId'] != null, "'projectId' cannot be null."),
-        apiKey = map['apiKey'],
-        appId = map['appId'],
-        messagingSenderId = map['messagingSenderId'],
-        projectId = map['projectId'],
-        authDomain = map['authDomain'],
-        databaseURL = map['databaseURL'],
-        storageBucket = map['storageBucket'],
-        measurementId = map['measurementId'],
-        trackingId = map['trackingId'],
-        deepLinkURLScheme = map['deepLinkURLScheme'],
-        androidClientId = map['androidClientId'],
-        iosClientId = map['iosClientId'],
-        iosBundleId = map['iosBundleId'],
-        appGroupId = map['appGroupId'];
+  FirebaseOptions.fromPigeon(CoreFirebaseOptions options)
+      : apiKey = options.apiKey,
+        appId = options.appId,
+        messagingSenderId = options.messagingSenderId,
+        projectId = options.projectId,
+        authDomain = options.authDomain,
+        databaseURL = options.databaseURL,
+        storageBucket = options.storageBucket,
+        measurementId = options.measurementId,
+        trackingId = options.trackingId,
+        deepLinkURLScheme = options.deepLinkURLScheme,
+        androidClientId = options.androidClientId,
+        iosClientId = options.iosClientId,
+        iosBundleId = options.iosBundleId,
+        appGroupId = options.appGroupId;
 
-  /// An API key used for authenticating requests from your app, for example
-  /// "AIzaSyDdVgKwhZl0sTTTLZ7iTmt1r3N2cJLnaDk", used to identify your app to
-  /// Google servers.
+  /// Returns a copy of this FirebaseOptions with the given fields replaced with
+  /// the new values.
+  FirebaseOptions copyWith({
+    String? apiKey,
+    String? appId,
+    String? messagingSenderId,
+    String? projectId,
+    String? authDomain,
+    String? databaseURL,
+    String? storageBucket,
+    String? measurementId,
+    String? trackingId,
+    String? deepLinkURLScheme,
+    String? androidClientId,
+    String? iosClientId,
+    String? iosBundleId,
+    String? appGroupId,
+  }) {
+    return FirebaseOptions(
+      apiKey: apiKey ?? this.apiKey,
+      appId: appId ?? this.appId,
+      messagingSenderId: messagingSenderId ?? this.messagingSenderId,
+      projectId: projectId ?? this.projectId,
+      authDomain: authDomain ?? this.authDomain,
+      databaseURL: databaseURL ?? this.databaseURL,
+      storageBucket: storageBucket ?? this.storageBucket,
+      measurementId: measurementId ?? this.measurementId,
+      trackingId: trackingId ?? this.trackingId,
+      deepLinkURLScheme: deepLinkURLScheme ?? this.deepLinkURLScheme,
+      androidClientId: androidClientId ?? this.androidClientId,
+      iosClientId: iosClientId ?? this.iosClientId,
+      iosBundleId: iosBundleId ?? this.iosBundleId,
+      appGroupId: appGroupId ?? this.appGroupId,
+    );
+  }
+
+  /// An API key used for authenticating requests from your app to Google
+  /// servers.
   final String apiKey;
 
   /// The Google App ID that is used to uniquely identify an instance of an app.
@@ -168,11 +199,11 @@ class FirebaseOptions {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! FirebaseOptions) return false;
-    return other.asMap.toString() == asMap.toString();
+    return const MapEquality().equals(asMap, other.asMap);
   }
 
   @override
-  int get hashCode => hashList(asMap.entries);
+  int get hashCode => const MapEquality().hash(asMap);
 
   @override
   String toString() => asMap.toString();

@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -6,6 +7,7 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging_platform_interface/firebase_messaging_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:meta/meta.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
@@ -13,12 +15,24 @@ import '../method_channel/method_channel_messaging.dart';
 
 /// Defines an interface to work with Messaging on web and mobile.
 abstract class FirebaseMessagingPlatform extends PlatformInterface {
+  /// Create an instance using [app].
+  FirebaseMessagingPlatform({this.appInstance}) : super(token: _token);
+
+  /// Create an instance with a [FirebaseApp] using an existing instance.
+  factory FirebaseMessagingPlatform.instanceFor({
+    required FirebaseApp app,
+    required Map<dynamic, dynamic> pluginConstants,
+  }) {
+    return FirebaseMessagingPlatform.instance
+        .delegateFor(app: app)
+        .setInitialValues(
+          isAutoInitEnabled: pluginConstants['AUTO_INIT_ENABLED'],
+        );
+  }
+
   /// The [FirebaseApp] this instance was initialized with.
   @protected
   final FirebaseApp? appInstance;
-
-  /// Create an instance using [app].
-  FirebaseMessagingPlatform({this.appInstance}) : super(token: _token);
 
   /// Returns the [FirebaseApp] for the current instance.
   FirebaseApp get app {
@@ -31,17 +45,6 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  /// Create an instance with a [FirebaseApp] using an existing instance.
-  factory FirebaseMessagingPlatform.instanceFor(
-      {required FirebaseApp app,
-      required Map<dynamic, dynamic> pluginConstants}) {
-    return FirebaseMessagingPlatform.instance
-        .delegateFor(app: app)
-        .setInitialValues(
-          isAutoInitEnabled: pluginConstants['AUTO_INIT_ENABLED'],
-        );
-  }
-
   static FirebaseMessagingPlatform? _instance;
 
   /// The current default [FirebaseMessagingPlatform] instance.
@@ -49,30 +52,27 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// It will always default to [MethodChannelFirebaseMessaging]
   /// if no other implementation was provided.
   static FirebaseMessagingPlatform get instance {
+    if (_instance == null) {
+      // This is only called for method channels since Web is setting the instance before we use `get`
+      MethodChannelFirebaseMessaging.setMethodCallHandlers();
+    }
     return _instance ??= MethodChannelFirebaseMessaging.instance;
   }
 
   /// Sets the [FirebaseMessagingPlatform.instance]
   static set instance(FirebaseMessagingPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
-
-  // ignore: close_sinks
-  static StreamController<RemoteMessage>? _onMessageStreamController;
 
   /// Returns a Stream that is called when an incoming FCM payload is received whilst
   /// the Flutter instance is in the foreground.
   ///
   /// To handle messages whilst the app is in the background or terminated,
   /// see [onBackgroundMessage].
-  static StreamController<RemoteMessage> get onMessage {
-    return _onMessageStreamController ??=
-        StreamController<RemoteMessage>.broadcast();
-  }
-
-  // ignore: close_sinks
-  static StreamController<RemoteMessage>? _onMessageOpenedAppStreamController;
+  // ignore: close_sinks, never closed
+  static final StreamController<RemoteMessage> onMessage =
+      StreamController<RemoteMessage>.broadcast();
 
   /// Returns a [Stream] that is called when a user presses a notification displayed
   /// via FCM.
@@ -82,10 +82,9 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   ///
   /// If your app is opened via a notification whilst the app is terminated,
   /// see [getInitialMessage].
-  static StreamController<RemoteMessage> get onMessageOpenedApp {
-    return _onMessageOpenedAppStreamController ??=
-        StreamController<RemoteMessage>.broadcast();
-  }
+  // ignore: close_sinks, never closed
+  static final StreamController<RemoteMessage> onMessageOpenedApp =
+      StreamController<RemoteMessage>.broadcast();
 
   static BackgroundMessageHandler? _onBackgroundMessageHandler;
 
@@ -142,6 +141,9 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// This should be used to determine whether specific notification interaction
   /// should open the app with a specific purpose (e.g. opening a chat message,
   /// specific screen etc).
+  ///
+  /// on Android, if the message was received in the foreground, and the notification was
+  /// pressed whilst the app is in a background/terminated state, this will return `null`.
   Future<RemoteMessage?> getInitialMessage() {
     throw UnimplementedError('getInitialMessage() is not implemented');
   }
@@ -158,9 +160,7 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// Removes access to an FCM token previously authorized with optional [senderId].
   ///
   /// Messages sent by the server to this token will fail.
-  Future<void> deleteToken({
-    String? senderId,
-  }) {
+  Future<void> deleteToken() {
     throw UnimplementedError('deleteToken() is not implemented');
   }
 
@@ -172,7 +172,6 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
 
   /// Returns the default FCM token for this device and optionally [senderId].
   Future<String?> getToken({
-    String? senderId,
     String? vapidKey,
   }) {
     throw UnimplementedError('getToken() is not implemented');
@@ -188,6 +187,12 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// To request permissions, call [requestPermission].
   Future<NotificationSettings> getNotificationSettings() {
     throw UnimplementedError('getNotificationSettings() is not implemented');
+  }
+
+  /// isSupported() informs web users whether
+  /// the browser supports Firebase.Messaging
+  Future<bool> isSupported() {
+    throw UnimplementedError('isSupported() is not implemented');
   }
 
   /// Prompts the user for notification permissions.
@@ -247,6 +252,12 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
     ///
     /// iOS only.
     bool sound = true,
+
+    /// Request permission for an option indicating the system should display a button for in-app notification settings.
+    /// Defaults to `false`.
+    ///
+    /// iOS/macOS only.
+    bool providesAppNotificationSettings = false,
   }) {
     throw UnimplementedError('requestPermission() is not implemented');
   }
@@ -307,5 +318,16 @@ abstract class FirebaseMessagingPlatform extends PlatformInterface {
   /// Unsubscribe from topic in background.
   Future<void> unsubscribeFromTopic(String topic) {
     throw UnimplementedError('unsubscribeFromTopic() is not implemented');
+  }
+
+  /// Enables or disables Firebase Cloud Messaging message delivery metrics export to BigQuery.
+  ///
+  /// On iOS, you need to follow [this guide](https://firebase.google.com/docs/cloud-messaging/understand-delivery?platform=ios#enable_delivery_data_export_for_background_notifications)
+  /// in order to export metrics to BigQuery.
+  /// On Web, you need to setup a [service worker](https://firebase.google.com/docs/cloud-messaging/js/client) and call `experimentalSetDeliveryMetricsExportedToBigQueryEnabled(messaging, true)`
+  Future<void> setDeliveryMetricsExportToBigQuery(bool enabled) {
+    throw UnimplementedError(
+      'setDeliveryMetricsExportToBigQuery() is not implemented',
+    );
   }
 }

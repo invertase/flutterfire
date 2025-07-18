@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -31,10 +32,10 @@ void main() {
       expect(listResultPlatform, isA<PlatformInterface>());
     });
 
-    group('verifyExtends()', () {
+    group('verify()', () {
       test('calls successfully', () {
         try {
-          ListResultPlatform.verifyExtends(listResultPlatform!);
+          ListResultPlatform.verify(listResultPlatform!);
           return;
         } catch (_) {
           fail('thrown an unexpected exception');

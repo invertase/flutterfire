@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -5,9 +6,9 @@
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 
 import 'internals.dart';
-import 'utils/web_utils.dart';
-import 'utils/codec_utility.dart';
 import 'interop/firestore.dart' as firestore_interop;
+import 'utils/encode_utility.dart';
+import 'utils/web_utils.dart';
 
 /// Web implementation for Firestore [DocumentReferencePlatform].
 class DocumentReferenceWeb extends DocumentReferencePlatform {
@@ -28,47 +29,59 @@ class DocumentReferenceWeb extends DocumentReferencePlatform {
 
   @override
   Future<void> set(Map<String, dynamic> data, [SetOptions? options]) {
-    return guard(
+    return convertWebExceptions(
       () => _delegate.set(
-        CodecUtility.encodeMapData(data)!,
+        EncodeUtility.encodeMapData(data)!,
         convertSetOptions(options),
       ),
     );
   }
 
   @override
-  Future<void> update(Map<String, dynamic> data) {
-    return guard(() => _delegate.update(CodecUtility.encodeMapData(data)!));
+  Future<void> update(Map<Object, dynamic> data) {
+    return convertWebExceptions(
+      () => _delegate.update(EncodeUtility.encodeMapDataFieldPath(data)!),
+    );
   }
 
   @override
   Future<DocumentSnapshotPlatform> get(
       [GetOptions options = const GetOptions()]) async {
-    firestore_interop.DocumentSnapshot documentSnapshot = await guard(
+    firestore_interop.DocumentSnapshot documentSnapshot =
+        await convertWebExceptions(
       () => _delegate.get(convertGetOptions(options)),
     );
 
-    return convertWebDocumentSnapshot(firestore, documentSnapshot);
+    return convertWebDocumentSnapshot(
+      firestore,
+      documentSnapshot,
+      options.serverTimestampBehavior,
+    );
   }
 
   @override
   Future<void> delete() {
-    return guard(_delegate.delete);
+    return convertWebExceptions(_delegate.delete);
   }
 
   @override
   Stream<DocumentSnapshotPlatform> snapshots({
     bool includeMetadataChanges = false,
+    required ListenSource listenSource,
   }) {
     Stream<firestore_interop.DocumentSnapshot> querySnapshots =
-        _delegate.onSnapshot;
-    if (includeMetadataChanges) {
-      querySnapshots = _delegate.onMetadataChangesSnapshot;
-    }
+        _delegate.onSnapshot(
+      includeMetadataChanges: includeMetadataChanges,
+      source: listenSource,
+    );
 
-    return guard(
+    return convertWebExceptions(
       () => querySnapshots.map((webSnapshot) {
-        return convertWebDocumentSnapshot(firestore, webSnapshot);
+        return convertWebDocumentSnapshot(
+          firestore,
+          webSnapshot,
+          ServerTimestampBehavior.none,
+        );
       }),
     );
   }

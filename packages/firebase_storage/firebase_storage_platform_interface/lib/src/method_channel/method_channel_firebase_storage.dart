@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -8,8 +9,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/services.dart';
 
 import '../../firebase_storage_platform_interface.dart';
+import '../pigeon/messages.pigeon.dart';
+import './utils/exception.dart';
 import 'method_channel_reference.dart';
-import 'method_channel_task_snapshot.dart';
 
 /// Method Channel delegate for [FirebaseStoragePlatform].
 class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
@@ -17,44 +19,7 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
   /// [bucket].
   MethodChannelFirebaseStorage(
       {required FirebaseApp app, required String bucket})
-      : super(appInstance: app, bucket: bucket) {
-    // The channel setMethodCallHandler callback is not app specific, so there
-    // is no need to register the caller more than once.
-    if (_initialized) return;
-
-    channel.setMethodCallHandler((MethodCall call) async {
-      Map<dynamic, dynamic> arguments = call.arguments;
-
-      switch (call.method) {
-        case 'Task#onProgress':
-          return _handleTaskStateChange(TaskState.running, arguments);
-        case 'Task#onPaused':
-          return _handleTaskStateChange(TaskState.paused, arguments);
-        case 'Task#onSuccess':
-          return _handleTaskStateChange(TaskState.success, arguments);
-        case 'Task#onCanceled':
-          return _sendTaskException(
-              arguments['handle'],
-              FirebaseException(
-                plugin: 'firebase_storage',
-                code: 'canceled',
-                message: 'User canceled the upload/download.',
-              ));
-        case 'Task#onFailure':
-          Map<String, dynamic> errorMap =
-              Map<String, dynamic>.from(arguments['error']);
-          return _sendTaskException(
-              arguments['handle'],
-              FirebaseException(
-                plugin: 'firebase_storage',
-                code: errorMap['code'],
-                message: errorMap['message'],
-              ));
-      }
-    });
-
-    _initialized = true;
-  }
+      : super(appInstance: app, bucket: bucket);
 
   /// Internal stub class initializer.
   ///
@@ -62,9 +27,28 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
   /// then initialized via the [delegateFor] method.
   MethodChannelFirebaseStorage._() : super(appInstance: null, bucket: '');
 
-  /// Keep an internal reference to whether the [MethodChannelFirebaseStorage]
-  /// class has already been initialized.
-  static bool _initialized = false;
+  /// Const Method channel name for Firebase Storage.
+  static const String storageMethodChannelName =
+      'plugins.flutter.io/firebase_storage';
+
+  /// Const task event name for the storage tasks
+  static const String storageTaskEventName = 'taskEvent';
+
+  /// The [EventChannel] used for storageTask
+  static EventChannel storageTaskChannel(String id) {
+    return EventChannel('$storageMethodChannelName/$storageTaskEventName/$id');
+  }
+
+  /// The pigeon channel instance to communicate through.
+  static final FirebaseStorageHostApi pigeonChannel = FirebaseStorageHostApi();
+
+  /// FirebaseApp pigeon instance
+  PigeonStorageFirebaseApp get pigeonFirebaseApp {
+    return PigeonStorageFirebaseApp(
+      appName: app.name,
+      bucket: bucket,
+    );
+  }
 
   /// Returns a unique key to identify the instance by [FirebaseApp] name and
   /// any custom storage buckets.
@@ -74,7 +58,7 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
 
   /// The [MethodChannelFirebaseStorage] method channel.
   static const MethodChannel channel = MethodChannel(
-    'plugins.flutter.io/firebase_storage',
+    storageMethodChannelName,
   );
 
   static Map<String, MethodChannelFirebaseStorage>
@@ -87,14 +71,40 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
     return MethodChannelFirebaseStorage._();
   }
 
+  /// Return an instance of a [PigeonStorageReference]
+  static PigeonStorageReference getPigeonReference(
+      String bucket, String fullPath, String name) {
+    return PigeonStorageReference(
+        bucket: bucket, fullPath: fullPath, name: name);
+  }
+
+  /// Return an instance of a [PigeonStorageFirebaseApp]
+  PigeonStorageFirebaseApp getPigeonFirebaseApp(String appName) {
+    return PigeonStorageFirebaseApp(
+      appName: appName,
+      bucket: bucket,
+    );
+  }
+
+  /// Convert a [SettableMetadata] to [PigeonSettableMetadata]
+  static PigeonSettableMetadata getPigeonSettableMetaData(
+      SettableMetadata? metaData) {
+    if (metaData == null) {
+      return PigeonSettableMetadata();
+    }
+    return PigeonSettableMetadata(
+        cacheControl: metaData.cacheControl,
+        contentDisposition: metaData.contentDisposition,
+        contentEncoding: metaData.contentEncoding,
+        contentLanguage: metaData.contentLanguage,
+        contentType: metaData.contentType,
+        customMetadata: metaData.customMetadata);
+  }
+
   static int _methodChannelHandleId = 0;
 
   /// Increments and returns the next channel ID handler for Storage.
   static int get nextMethodChannelHandleId => _methodChannelHandleId++;
-
-  /// A map containing all Task stream observers, keyed by their handle.
-  static final Map<int, StreamController<dynamic>> taskObservers =
-      <int, StreamController<TaskSnapshotPlatform>>{};
 
   @override
   int maxOperationRetryTime = const Duration(minutes: 2).inMilliseconds;
@@ -104,28 +114,6 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
 
   @override
   int maxDownloadRetryTime = const Duration(minutes: 10).inMilliseconds;
-
-  Future<void> _handleTaskStateChange(
-      TaskState taskState, Map<dynamic, dynamic> arguments) async {
-    // Get & cast native snapshot data to a Map
-    Map<String, dynamic> snapshotData =
-        Map<String, dynamic>.from(arguments['snapshot']);
-
-    // Get the cached Storage instance.
-    FirebaseStoragePlatform storage = _methodChannelFirebaseStorageInstances[
-        _getInstanceKey(arguments['appName'], arguments['bucket'])]!;
-
-    // Create a snapshot.
-    TaskSnapshotPlatform snapshot =
-        MethodChannelTaskSnapshot(storage, taskState, snapshotData);
-
-    // Fire a snapshot event.
-    taskObservers[arguments['handle']]!.add(snapshot);
-  }
-
-  void _sendTaskException(int handle, FirebaseException exception) {
-    taskObservers[handle]!.addError(exception);
-  }
 
   @override
   FirebaseStoragePlatform delegateFor(
@@ -142,17 +130,32 @@ class MethodChannelFirebaseStorage extends FirebaseStoragePlatform {
   }
 
   @override
+  Future<void> useStorageEmulator(String host, int port) async {
+    emulatorHost = host;
+    emulatorPort = port;
+    try {
+      return await pigeonChannel.useStorageEmulator(
+          pigeonFirebaseApp, host, port);
+    } catch (e, s) {
+      convertPlatformException(e, s);
+    }
+  }
+
+  @override
   void setMaxOperationRetryTime(int time) {
     maxOperationRetryTime = time;
+    pigeonChannel.setMaxOperationRetryTime(pigeonFirebaseApp, time);
   }
 
   @override
   void setMaxUploadRetryTime(int time) {
     maxUploadRetryTime = time;
+    pigeonChannel.setMaxUploadRetryTime(pigeonFirebaseApp, time);
   }
 
   @override
-  Future<void> setMaxDownloadRetryTime(int time) async {
+  void setMaxDownloadRetryTime(int time) {
     maxDownloadRetryTime = time;
+    pigeonChannel.setMaxDownloadRetryTime(pigeonFirebaseApp, time);
   }
 }

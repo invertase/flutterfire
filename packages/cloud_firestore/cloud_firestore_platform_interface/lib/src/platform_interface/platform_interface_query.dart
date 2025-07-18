@@ -1,11 +1,13 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 import 'dart:async';
 
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
+import 'package:meta/meta.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 Map<String, dynamic> _initialParameters = Map<String, dynamic>.unmodifiable({
   'where': List<List<dynamic>>.unmodifiable([]),
@@ -19,13 +21,8 @@ Map<String, dynamic> _initialParameters = Map<String, dynamic>.unmodifiable({
 });
 
 /// Represents a query over the data at a particular location.
+@immutable
 abstract class QueryPlatform extends PlatformInterface {
-  /// The [FirebaseFirestorePlatform] interface for this current query.
-  final FirebaseFirestorePlatform firestore;
-
-  /// Stores the instances query modifier filters.
-  Map<String, dynamic> parameters;
-
   /// Create a [QueryPlatform] instance
   QueryPlatform(this.firestore, Map<String, dynamic>? params)
       : parameters = params ?? _initialParameters,
@@ -33,21 +30,25 @@ abstract class QueryPlatform extends PlatformInterface {
 
   static final Object _token = Object();
 
-  /// Returns whether the current query is targetted at a collection group.
-  bool get isCollectionGroupQuery {
-    throw UnimplementedError('isCollectionGroupQuery is not implemented');
-  }
-
   /// Throws an [AssertionError] if [instance] does not extend
   /// [QueryPlatform].
   ///
   /// This is used by the app-facing [Query] to ensure that
   /// the object in which it's going to delegate calls has been
   /// constructed properly.
-  static void verifyExtends(QueryPlatform instance) {
-    if (instance is! CollectionReferencePlatform) {
-      PlatformInterface.verifyToken(instance, _token);
-    }
+  static void verify(QueryPlatform instance) {
+    PlatformInterface.verify(instance, _token);
+  }
+
+  /// The [FirebaseFirestorePlatform] interface for this current query.
+  final FirebaseFirestorePlatform firestore;
+
+  /// Stores the instances query modifier filters.
+  final Map<String, dynamic> parameters;
+
+  /// Returns whether the current query is targeted at a collection group.
+  bool get isCollectionGroupQuery {
+    throw UnimplementedError('isCollectionGroupQuery is not implemented');
   }
 
   /// Creates and returns a new [QueryPlatform] that ends at the provided document
@@ -76,7 +77,7 @@ abstract class QueryPlatform extends PlatformInterface {
   /// Cannot be used in combination with [endBefore], [endBeforeDocument], or
   /// [endAtDocument], but can be used in combination with [startAt],
   /// [startAfter], [startAtDocument] and [startAfterDocument].
-  QueryPlatform endAt(List<dynamic> fields) {
+  QueryPlatform endAt(Iterable<dynamic> fields) {
     throw UnimplementedError('endAt() is not implemented');
   }
 
@@ -94,7 +95,8 @@ abstract class QueryPlatform extends PlatformInterface {
   ///  * [startAfterDocument] for a query that starts after document.
   ///  * [startAtDocument] for a query that starts at a document.
   ///  * [endAtDocument] for a query that ends at a document.
-  QueryPlatform endBeforeDocument(List<dynamic> orders, List<dynamic> values) {
+  QueryPlatform endBeforeDocument(
+      Iterable<dynamic> orders, Iterable<dynamic> values) {
     throw UnimplementedError('endBeforeDocument() is not implemented');
   }
 
@@ -106,7 +108,7 @@ abstract class QueryPlatform extends PlatformInterface {
   /// Cannot be used in combination with [endAt], [endBeforeDocument], or
   /// [endBeforeDocument], but can be used in combination with [startAt],
   /// [startAfter], [startAtDocument] and [startAfterDocument].
-  QueryPlatform endBefore(List<dynamic> fields) {
+  QueryPlatform endBefore(Iterable<dynamic> fields) {
     throw UnimplementedError('endBefore() is not implemented');
   }
 
@@ -133,6 +135,7 @@ abstract class QueryPlatform extends PlatformInterface {
   /// Notifies of query results at this location
   Stream<QuerySnapshotPlatform> snapshots({
     bool includeMetadataChanges = false,
+    required ListenSource listenSource,
   }) {
     throw UnimplementedError('snapshots() is not implemented');
   }
@@ -144,10 +147,10 @@ abstract class QueryPlatform extends PlatformInterface {
   /// After a [FieldPath.documentId] order by call, you cannot add any more [orderBy]
   /// calls.
   /// Furthermore, you may not use [orderBy] on the [FieldPath.documentId] [field] when
-  /// using [startAfterDocument], [startAtDocument], [endAfterDocument],
+  /// using [startAfterDocument], [startAtDocument], [endBeforeDocument],
   /// or [endAtDocument] because the order by clause on the document id
   /// is added by these methods implicitly.
-  QueryPlatform orderBy(List<List<dynamic>> orders) {
+  QueryPlatform orderBy(Iterable<List<dynamic>> orders) {
     throw UnimplementedError('orderBy() is not implemented');
   }
 
@@ -162,7 +165,7 @@ abstract class QueryPlatform extends PlatformInterface {
   ///
   /// See also:
   ///
-  ///  * [endAfterDocument] for a query that ends after a document.
+  ///  * [endBeforeDocument] for a query that ends after a document.
   ///  * [startAtDocument] for a query that starts at a document.
   ///  * [endAtDocument] for a query that ends at a document.
   QueryPlatform startAfterDocument(List<dynamic> orders, List<dynamic> values) {
@@ -177,7 +180,7 @@ abstract class QueryPlatform extends PlatformInterface {
   /// Cannot be used in combination with [startAt], [startAfterDocument], or
   /// [startAtDocument], but can be used in combination with [endAt],
   /// [endBefore], [endAtDocument] and [endBeforeDocument].
-  QueryPlatform startAfter(List<dynamic> fields) {
+  QueryPlatform startAfter(Iterable<dynamic> fields) {
     throw UnimplementedError('startAfter() is not implemented');
   }
 
@@ -195,7 +198,8 @@ abstract class QueryPlatform extends PlatformInterface {
   ///  * [startAfterDocument] for a query that starts after a document.
   ///  * [endAtDocument] for a query that ends at a document.
   ///  * [endBeforeDocument] for a query that ends before a document.
-  QueryPlatform startAtDocument(List<dynamic> orders, List<dynamic> values) {
+  QueryPlatform startAtDocument(
+      Iterable<dynamic> orders, Iterable<dynamic> values) {
     throw UnimplementedError('startAtDocument() is not implemented');
   }
 
@@ -207,7 +211,7 @@ abstract class QueryPlatform extends PlatformInterface {
   /// Cannot be used in combination with [startAfter], [startAfterDocument],
   /// or [startAtDocument], but can be used in combination with [endAt],
   /// [endBefore], [endAtDocument] and [endBeforeDocument].
-  QueryPlatform startAt(List<dynamic> fields) {
+  QueryPlatform startAt(Iterable<dynamic> fields) {
     throw UnimplementedError('startAt() is not implemented');
   }
 
@@ -225,4 +229,90 @@ abstract class QueryPlatform extends PlatformInterface {
   QueryPlatform where(List<List<dynamic>> conditions) {
     throw UnimplementedError('where() is not implemented');
   }
+
+  QueryPlatform whereFilter(FilterPlatformInterface filter) {
+    throw UnimplementedError('whereFilter() is not implemented');
+  }
+
+  /// Returns an [AggregateQueryPlatform] which uses the [QueryPlatform] to query for
+  /// metadata
+  AggregateQueryPlatform count() {
+    throw UnimplementedError('count() is not implemented');
+  }
+
+  AggregateQueryPlatform aggregate(
+    AggregateField aggregateField1, [
+    AggregateField? aggregateField2,
+    AggregateField? aggregateField3,
+    AggregateField? aggregateField4,
+    AggregateField? aggregateField5,
+    AggregateField? aggregateField6,
+    AggregateField? aggregateField7,
+    AggregateField? aggregateField8,
+    AggregateField? aggregateField9,
+    AggregateField? aggregateField10,
+    AggregateField? aggregateField11,
+    AggregateField? aggregateField12,
+    AggregateField? aggregateField13,
+    AggregateField? aggregateField14,
+    AggregateField? aggregateField15,
+    AggregateField? aggregateField16,
+    AggregateField? aggregateField17,
+    AggregateField? aggregateField18,
+    AggregateField? aggregateField19,
+    AggregateField? aggregateField20,
+    AggregateField? aggregateField21,
+    AggregateField? aggregateField22,
+    AggregateField? aggregateField23,
+    AggregateField? aggregateField24,
+    AggregateField? aggregateField25,
+    AggregateField? aggregateField26,
+    AggregateField? aggregateField27,
+    AggregateField? aggregateField28,
+    AggregateField? aggregateField29,
+    AggregateField? aggregateField30,
+  ]) {
+    throw UnimplementedError('aggregate() is not implemented');
+  }
+
+  /// Returns an [AggregateQueryPlatform] which uses the [QueryPlatform] to query for
+  /// metadata
+  ///
+  /// This method is not exposed in the public API, but can be used internally
+  AggregateQueryPlatform sum(String field) {
+    throw UnimplementedError('sum() is not implemented');
+  }
+
+  /// Returns an [AggregateQueryPlatform] which uses the [QueryPlatform] to query for
+  /// metadata
+  ///
+  /// This method is not exposed in the public API, but can be used internally
+  AggregateQueryPlatform average(String field) {
+    throw UnimplementedError('average() is not implemented');
+  }
+}
+
+abstract class AggregateField {}
+
+/// Create a CountAggregateField object that can be used to compute
+/// the count of documents in the result set of a query.
+// ignore: camel_case_types
+class count extends AggregateField {}
+
+/// Create an object that can be used to compute the sum of a specified field
+/// over a range of documents in the result set of a query.
+// ignore: camel_case_types
+class sum extends AggregateField {
+  sum(this.field);
+
+  final String field;
+}
+
+/// Create an object that can be used to compute the average of a specified field
+/// over a range of documents in the result set of a query.
+// ignore: camel_case_types
+class average extends AggregateField {
+  average(this.field);
+
+  final String field;
 }

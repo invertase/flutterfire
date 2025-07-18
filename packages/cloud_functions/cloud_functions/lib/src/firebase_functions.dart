@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2019, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-part of cloud_functions;
+part of '../cloud_functions.dart';
 
 /// The entry point for accessing FirebaseFunctions.
 ///
@@ -59,31 +60,59 @@ class FirebaseFunctions extends FirebasePluginPlatform {
   String? _origin;
 
   /// A reference to the Callable HTTPS trigger with the given name.
-  HttpsCallable httpsCallable(String name, {HttpsCallableOptions? options}) {
+  ///
+  /// Should be the name of the Callable function in Firebase
+  HttpsCallable httpsCallable(
+    String name, {
+    HttpsCallableOptions? options,
+  }) {
     assert(name.isNotEmpty);
     options ??= HttpsCallableOptions();
     return HttpsCallable._(delegate.httpsCallable(_origin, name, options));
   }
 
+  /// A reference to the Callable HTTPS trigger with the given URL.
+  ///
+  /// Should be URL of the 2nd gen Callable function in Firebase.
+  HttpsCallable httpsCallableFromUrl(
+    String url, {
+    HttpsCallableOptions? options,
+  }) {
+    final uri = Uri.parse(url);
+    options ??= HttpsCallableOptions();
+    return HttpsCallable._(
+        delegate.httpsCallableWithUri(_origin, uri, options));
+  }
+
+  /// A reference to the Callable HTTPS trigger with the given Uri.
+  ///
+  /// Should be Uri of the 2nd gen Callable function in Firebase.
+  HttpsCallable httpsCallableFromUri(
+    Uri uri, {
+    HttpsCallableOptions? options,
+  }) {
+    options ??= HttpsCallableOptions();
+    return HttpsCallable._(
+        delegate.httpsCallableWithUri(_origin, uri, options));
+  }
+
   /// Changes this instance to point to a Cloud Functions emulator running locally.
   ///
-  /// Set the [origin] of the local emulator, such as "http://localhost:5001", or `null`
-  /// to remove.
-  void useFunctionsEmulator({required String origin}) {
-    assert(origin.isNotEmpty);
-
+  /// Set the [host] of the local emulator, such as "localhost"
+  /// Set the [port] of the local emulator, such as "5001" (port 5001 is default for functions package)
+  void useFunctionsEmulator(String host, int port,
+      {bool automaticHostMapping = true}) {
+    String mappedHost = host;
     // Android considers localhost as 10.0.2.2 - automatically handle this for users.
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      if (origin.startsWith('http://localhost')) {
-        _origin = origin.replaceFirst('http://localhost', 'http://10.0.2.2');
-        return;
-      }
-      if (origin.startsWith('http://127.0.0.1')) {
-        _origin = origin.replaceFirst('http://127.0.0.1', 'http://10.0.2.2');
-        return;
+      if ((mappedHost == 'localhost' || mappedHost == '127.0.0.1') &&
+          automaticHostMapping) {
+        // ignore: avoid_print
+        print('Mapping Functions Emulator host "$mappedHost" to "10.0.2.2".');
+        mappedHost = '10.0.2.2';
       }
     }
 
-    _origin = origin;
+    _origin = 'http://$mappedHost:$port';
   }
 }

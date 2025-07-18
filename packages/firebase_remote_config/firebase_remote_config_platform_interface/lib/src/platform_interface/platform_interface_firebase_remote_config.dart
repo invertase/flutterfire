@@ -1,3 +1,8 @@
+// Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+// ignore_for_file: require_trailing_commas
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -47,7 +52,7 @@ abstract class FirebaseRemoteConfigPlatform extends PlatformInterface {
 
   /// Sets the [FirebaseRemoteConfigPlatform] instance.
   static set instance(FirebaseRemoteConfigPlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+    PlatformInterface.verify(instance, _token);
     _instance = instance;
   }
 
@@ -117,6 +122,9 @@ abstract class FirebaseRemoteConfigPlatform extends PlatformInterface {
   /// Performs a fetch and activate operation, as a convenience.
   ///
   /// Returns [bool] in the same way that is done for [activate].
+  /// A [FirebaseException] maybe thrown with the following error code:
+  /// - **forbidden**:
+  ///  - Thrown if the Google Cloud Platform Firebase Remote Config API is disabled
   Future<bool> fetchAndActivate() {
     throw UnimplementedError('fetchAndActivate() is not implemented');
   }
@@ -127,21 +135,29 @@ abstract class FirebaseRemoteConfigPlatform extends PlatformInterface {
   }
 
   /// Gets the value for a given key as a bool.
+  ///
+  /// Returns `false` if the key does not exist.
   bool getBool(String key) {
     throw UnimplementedError('getBool() is not implemented');
   }
 
   /// Gets the value for a given key as an int.
+  ///
+  /// Returns `0` if the key does not exist.
   int getInt(String key) {
     throw UnimplementedError('getInt() is not implemented');
   }
 
   /// Gets the value for a given key as a double.
+  ///
+  /// Returns `0.0` if the key does not exist.
   double getDouble(String key) {
     throw UnimplementedError('getDouble() is not implemented');
   }
 
   /// Gets the value for a given key as a String.
+  ///
+  /// Returns an empty String if the key does not exist.
   String getString(String key) {
     throw UnimplementedError('getString() is not implemented');
   }
@@ -159,5 +175,19 @@ abstract class FirebaseRemoteConfigPlatform extends PlatformInterface {
   /// Sets the default parameter values for the current instance.
   Future<void> setDefaults(Map<String, dynamic> defaultParameters) {
     throw UnimplementedError('setDefaults() is not implemented');
+  }
+
+  /// Get a [Stream] of [RemoteConfigUpdate]s.
+  Stream<RemoteConfigUpdate> get onConfigUpdated {
+    throw UnimplementedError('onConfigUpdated getter not implemented');
+  }
+
+  /// Changes the custom signals for this FirebaseRemoteConfig instance
+  /// Custom signals are subject to limits on the size of key/value pairs and the total number of signals.
+  /// Any calls that exceed these limits will be discarded.
+  /// If a key already exists, the value is overwritten. Setting the value of a custom signal to null un-sets the signal.
+  /// The signals will be persisted locally on the client.
+  Future<void> setCustomSignals(Map<String, Object?> customSignals) {
+    throw UnimplementedError('setCustomSignals() is not implemented');
   }
 }

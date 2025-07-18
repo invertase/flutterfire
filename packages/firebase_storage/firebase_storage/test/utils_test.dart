@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -47,50 +48,92 @@ void main() {
       String url =
           'http://firebasestorage.googleapis.com/v0/b/valid-url.appspot.com/o/path';
 
-      final result = partsFromHttpUrl(url)!;
+      final result = partsFromHttpUrl(url);
 
-      expect(result['bucket'], 'valid-url.appspot.com');
-      expect(result['path'], 'path');
+      expect(result?['bucket'], 'valid-url.appspot.com');
+      expect(result?['path'], 'path');
     });
 
     test('parses a https url with host "firebasestorage.googleapis.com"', () {
       String url =
           'https://firebasestorage.googleapis.com/v0/b/valid-url.appspot.com/o/path';
 
-      final result = partsFromHttpUrl(url)!;
+      final result = partsFromHttpUrl(url);
 
-      expect(result['bucket'], 'valid-url.appspot.com');
-      expect(result['path'], 'path');
+      expect(result?['bucket'], 'valid-url.appspot.com');
+      expect(result?['path'], 'path');
     });
 
     test('parses a https url with host "storage.cloud.google.com"', () {
       String url =
-          'https://storage.cloud.google.com/v0/b/valid-url.appspot.com/o/path';
+          'https://storage.cloud.google.com/valid-url.appspot.com/path/to/file';
 
-      final result = partsFromHttpUrl(url)!;
+      final result = partsFromHttpUrl(url);
 
-      expect(result['bucket'], 'valid-url.appspot.com');
-      expect(result['path'], 'path');
+      expect(result?['bucket'], 'valid-url.appspot.com');
+      expect(result?['path'], 'path/to/file');
     });
 
     test('parses a encoded https url', () {
       String url =
           'https%3A%2F%2Ffirebasestorage.googleapis.com%2Fv0%2Fb%2Freact-native-firebase-testing.appspot.com%2Fo%2F1mbTestFile.gif%3Falt%3Dmedia';
 
-      final result = partsFromHttpUrl(url)!;
+      final result = partsFromHttpUrl(url);
 
-      expect(result['bucket'], 'react-native-firebase-testing.appspot.com');
-      expect(result['path'], '1mbTestFile.gif');
+      expect(result?['bucket'], 'react-native-firebase-testing.appspot.com');
+      expect(result?['path'], '1mbTestFile.gif');
     });
 
     test('parses a un-encoded https url with special characters', () {
       String url =
           'https://firebasestorage.googleapis.com/v0/b/valid-url.appspot.com/o/foo+bar/file with  spaces .png?alt=media';
 
-      final result = partsFromHttpUrl(url)!;
+      final result = partsFromHttpUrl(url);
 
-      expect(result['bucket'], 'valid-url.appspot.com');
-      expect(result['path'], 'foo+bar/file with  spaces .png');
+      expect(result?['bucket'], 'valid-url.appspot.com');
+      expect(result?['path'], 'foo+bar/file with  spaces .png');
+    });
+
+    test('parses a https url with query param', () {
+      String url =
+          'https://storage.cloud.google.com/valid-url.appspot.com/path/to/foo_bar.jpg?foo=bar';
+
+      final result = partsFromHttpUrl(url);
+
+      expect(result?['bucket'], 'valid-url.appspot.com');
+      expect(result?['path'], 'path/to/foo_bar.jpg');
+    });
+
+    test(
+        'parses HTTP URL correctly when using Android emulator localhost (10.0.2.2)',
+        () {
+      const androidLocalhost = '10.0.2.2';
+
+      final result = partsFromHttpUrl(
+          'http://$androidLocalhost:9199/v0/b/myapp.appspot.com/o/path/to/foo_bar.jpg');
+
+      expect(
+        result,
+        isNotNull,
+        reason:
+            'partsFromHttpUrl should not return null for Android localhost URLs',
+      );
+      expect(result?['bucket'], 'myapp.appspot.com');
+      expect(result?['path'], 'path/to/foo_bar.jpg');
+    });
+
+    test('parses HTTP URL correctly when using standard localhost (127.0.0.1)',
+        () {
+      final result = partsFromHttpUrl(
+          'http://localhost:9199/v0/b/myapp.appspot.com/o/path/to/foo_bar.jpg');
+
+      expect(
+        result,
+        isNotNull,
+        reason: 'partsFromHttpUrl should not return null for localhost URLs',
+      );
+      expect(result?['bucket'], 'myapp.appspot.com');
+      expect(result?['path'], 'path/to/foo_bar.jpg');
     });
 
     // TODO(helenaford): regexp can't handle no paths

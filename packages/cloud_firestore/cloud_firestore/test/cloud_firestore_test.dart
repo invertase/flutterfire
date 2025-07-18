@@ -18,13 +18,14 @@ void main() {
     setUpAll(() async {
       await Firebase.initializeApp();
       secondaryApp = await Firebase.initializeApp(
-          name: 'foo',
-          options: const FirebaseOptions(
-            apiKey: '123',
-            appId: '123',
-            messagingSenderId: '123',
-            projectId: '123',
-          ));
+        name: 'foo',
+        options: const FirebaseOptions(
+          apiKey: '123',
+          appId: '123',
+          messagingSenderId: '123',
+          projectId: '123',
+        ),
+      );
 
       firestore = FirebaseFirestore.instance;
       firestoreSecondary = FirebaseFirestore.instanceFor(app: secondaryApp!);
@@ -32,8 +33,41 @@ void main() {
 
     test('equality', () {
       expect(firestore, equals(FirebaseFirestore.instance));
-      expect(firestoreSecondary,
-          equals(FirebaseFirestore.instanceFor(app: secondaryApp!)));
+      expect(firestore.hashCode, firestore.hashCode);
+      expect(
+        firestoreSecondary,
+        equals(FirebaseFirestore.instanceFor(app: secondaryApp!)),
+      );
+    });
+
+    test('databaseId and databaseURL', () {
+      final firestore = FirebaseFirestore.instanceFor(
+        // ignore: deprecated_member_use_from_same_package
+        app: Firebase.app(), databaseURL: 'foo',
+      );
+
+      // ignore: deprecated_member_use_from_same_package
+      expect(firestore.databaseURL, equals('foo'));
+
+      expect(firestore.databaseId, equals('foo'));
+
+      final firestore2 =
+          FirebaseFirestore.instanceFor(app: Firebase.app(), databaseId: 'bar');
+
+      // ignore: deprecated_member_use_from_same_package
+      expect(firestore2.databaseURL, equals('bar'));
+
+      expect(firestore2.databaseId, equals('bar'));
+
+      final firestore3 = FirebaseFirestore.instanceFor(
+        // ignore: deprecated_member_use_from_same_package
+        app: Firebase.app(), databaseId: 'fire', databaseURL: 'not-this',
+      );
+
+      // databaseId should take precedence
+      expect(firestore3.databaseId, equals('fire'));
+      // ignore: deprecated_member_use_from_same_package
+      expect(firestore3.databaseURL, equals('fire'));
     });
 
     test('returns the correct $FirebaseApp', () {
@@ -47,12 +81,12 @@ void main() {
       });
 
       test('does not expect an empty path', () {
-        expect(() => firestore!.collection(''), throwsAssertionError);
+        expect(() => firestore!.collection(''), throwsArgumentError);
       });
 
       test('does accept an invalid path', () {
         // 'foo/bar' points to a document
-        expect(() => firestore!.collection('foo/bar'), throwsAssertionError);
+        expect(() => firestore!.collection('foo/bar'), throwsArgumentError);
       });
     });
 
@@ -62,12 +96,14 @@ void main() {
       });
 
       test('does not expect an empty path', () {
-        expect(() => firestore!.collectionGroup(''), throwsAssertionError);
+        expect(() => firestore!.collectionGroup(''), throwsArgumentError);
       });
 
       test('does accept a path containing "/"', () {
-        expect(() => firestore!.collectionGroup('foo/bar/baz'),
-            throwsAssertionError);
+        expect(
+          () => firestore!.collectionGroup('foo/bar/baz'),
+          throwsArgumentError,
+        );
       });
     });
 
@@ -77,12 +113,12 @@ void main() {
       });
 
       test('does not expect an empty path', () {
-        expect(() => firestore!.doc(''), throwsAssertionError);
+        expect(() => firestore!.doc(''), throwsArgumentError);
       });
 
       test('does accept an invalid path', () {
         // 'foo' points to a collection
-        expect(() => firestore!.doc('bar'), throwsAssertionError);
+        expect(() => firestore!.doc('bar'), throwsArgumentError);
       });
     });
   });

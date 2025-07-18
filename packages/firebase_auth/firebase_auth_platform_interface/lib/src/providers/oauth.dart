@@ -1,9 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'package:firebase_auth_platform_interface/firebase_auth_platform_interface.dart';
-import 'package:firebase_auth_platform_interface/src/auth_provider.dart';
 import 'package:meta/meta.dart';
 
 /// A generic provider instance.
@@ -15,22 +15,25 @@ class OAuthProvider extends AuthProvider {
   OAuthProvider(String providerId) : super(providerId);
 
   List<String> _scopes = [];
-  Map<dynamic, dynamic> _parameters = {};
+  Map<String, String> _parameters = {};
 
   /// Returns the currently assigned scopes to this provider instance.
-  /// This is a Web only API.
   List<String> get scopes {
     return _scopes;
   }
 
   /// Returns the parameters for this provider instance.
-  /// This is a Web only API.
-  Map<dynamic, dynamic> get parameters {
+  Map<String, String> get parameters {
     return _parameters;
   }
 
+  /// Returns the parameters for this provider instance.
+  OAuthProvider setScopes(List<String> scopes) {
+    _scopes = scopes;
+    return this;
+  }
+
   /// Adds OAuth scope.
-  /// This is a Web only API.
   OAuthProvider addScope(String scope) {
     _scopes.add(scope);
     return this;
@@ -38,9 +41,8 @@ class OAuthProvider extends AuthProvider {
 
   /// Sets the OAuth custom parameters to pass in a OAuth request for popup and
   /// redirect sign-in operations.
-  /// This is a Web only API.
   OAuthProvider setCustomParameters(
-    Map<dynamic, dynamic> customOAuthParameters,
+    Map<String, String> customOAuthParameters,
   ) {
     _parameters = customOAuthParameters;
     return this;
@@ -49,13 +51,16 @@ class OAuthProvider extends AuthProvider {
   /// Create a new [OAuthCredential] from a provided [accessToken];
   OAuthCredential credential({
     String? accessToken,
+    String? secret,
     String? idToken,
     String? rawNonce,
+    String? signInMethod,
   }) {
     return OAuthCredential(
       providerId: providerId,
-      signInMethod: 'oauth',
+      signInMethod: signInMethod ?? 'oauth',
       accessToken: accessToken,
+      secret: secret,
       idToken: idToken,
       rawNonce: rawNonce,
     );
@@ -72,15 +77,17 @@ class OAuthCredential extends AuthCredential {
   const OAuthCredential({
     required String providerId,
     required String signInMethod,
-    this.accessToken,
+    String? accessToken,
     this.idToken,
     this.secret,
     this.rawNonce,
-  }) : super(providerId: providerId, signInMethod: signInMethod);
-
-  /// The OAuth access token associated with the credential if it belongs to an
-  /// OAuth provider, such as `facebook.com`, `twitter.com`, etc.
-  final String? accessToken;
+    this.serverAuthCode,
+    this.appleFullPersonName,
+  }) : super(
+          providerId: providerId,
+          signInMethod: signInMethod,
+          accessToken: accessToken,
+        );
 
   /// The OAuth ID token associated with the credential if it belongs to an
   /// OIDC provider, such as `google.com`.
@@ -95,6 +102,15 @@ class OAuthCredential extends AuthCredential {
   /// must match the nonce field in the ID token.
   final String? rawNonce;
 
+  /// the server auth code for Play Games credential.
+  final String? serverAuthCode;
+
+  /// The full name of the user. Used to create an AuthCredential for the
+  /// Sign in with Apple OAuth 2 provider identified by ID token, raw nonce,
+  /// and full name. This method is specific to the Sign in with Apple OAuth 2
+  /// provider as this provider requires the full name to be passed explicitly.
+  final AppleFullPersonName? appleFullPersonName;
+
   @override
   Map<String, String?> asMap() {
     return <String, String?>{
@@ -104,6 +120,13 @@ class OAuthCredential extends AuthCredential {
       'accessToken': accessToken,
       'secret': secret,
       'rawNonce': rawNonce,
+      'serverAuthCode': serverAuthCode,
+      'familyName': appleFullPersonName?.familyName,
+      'givenName': appleFullPersonName?.givenName,
+      'middleName': appleFullPersonName?.middleName,
+      'nickname': appleFullPersonName?.nickname,
+      'namePrefix': appleFullPersonName?.namePrefix,
+      'nameSuffix': appleFullPersonName?.nameSuffix,
     };
   }
 }

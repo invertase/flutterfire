@@ -7,8 +7,8 @@ package io.flutter.plugins.firebase.messaging;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Parcel;
 import android.util.Log;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.google.firebase.messaging.RemoteMessage;
 import java.util.HashMap;
 
@@ -20,7 +20,19 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
   public void onReceive(Context context, Intent intent) {
     Log.d(TAG, "broadcast received for message");
     if (ContextHolder.getApplicationContext() == null) {
-      ContextHolder.setApplicationContext(context.getApplicationContext());
+      Context aContext = context;
+      if (context.getApplicationContext() != null) {
+        aContext = context.getApplicationContext();
+      }
+
+      ContextHolder.setApplicationContext(aContext);
+    }
+
+    if (intent.getExtras() == null) {
+      Log.d(
+          TAG,
+          "broadcast received but intent contained no extras to process RemoteMessage. Operation cancelled.");
+      return;
     }
 
     RemoteMessage remoteMessage = new RemoteMessage(intent.getExtras());
@@ -35,9 +47,7 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
     //      App in Foreground
     //   ------------------------
     if (FlutterFirebaseMessagingUtils.isApplicationForeground(context)) {
-      Intent onMessageIntent = new Intent(FlutterFirebaseMessagingUtils.ACTION_REMOTE_MESSAGE);
-      onMessageIntent.putExtra(FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE, remoteMessage);
-      LocalBroadcastManager.getInstance(context).sendBroadcast(onMessageIntent);
+      FlutterFirebaseRemoteMessageLiveData.getInstance().postRemoteMessage(remoteMessage);
       return;
     }
 
@@ -46,9 +56,17 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
     //   ------------------------
     Intent onBackgroundMessageIntent =
         new Intent(context, FlutterFirebaseMessagingBackgroundService.class);
+
+    Parcel parcel = Parcel.obtain();
+    remoteMessage.writeToParcel(parcel, 0);
+    // We write to parcel using RemoteMessage.writeToParcel() to pass entire RemoteMessage as array of bytes
+    // Which can be read using RemoteMessage.createFromParcel(parcel) API
     onBackgroundMessageIntent.putExtra(
-        FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE, remoteMessage);
+        FlutterFirebaseMessagingUtils.EXTRA_REMOTE_MESSAGE, parcel.marshall());
+
     FlutterFirebaseMessagingBackgroundService.enqueueMessageProcessing(
-        context, onBackgroundMessageIntent);
+        context,
+        onBackgroundMessageIntent,
+        remoteMessage.getOriginalPriority() == RemoteMessage.PRIORITY_HIGH);
   }
 }

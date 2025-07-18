@@ -1,8 +1,9 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-part of firebase_core_platform_interface;
+part of '../firebase_core_platform_interface.dart';
 
 /// A generic class which provides exceptions in a Firebase-friendly format
 /// to users.
@@ -29,9 +30,10 @@ class FirebaseException implements Exception {
   FirebaseException({
     required this.plugin,
     this.message,
-    this.code = 'unknown',
+    String? code,
     this.stackTrace,
-  });
+    // ignore: unnecessary_this
+  }) : this.code = code ?? 'unknown';
 
   /// The plugin the exception is for.
   ///
@@ -61,14 +63,14 @@ class FirebaseException implements Exception {
   }
 
   @override
-  int get hashCode => hashValues(plugin, code, message);
+  int get hashCode => Object.hash(plugin, code, message);
 
   @override
   String toString() {
     String output = '[$plugin/$code] $message';
 
     if (stackTrace != null) {
-      output += '\n\n${stackTrace.toString()}';
+      output += '\n\n$stackTrace';
     }
 
     return output;

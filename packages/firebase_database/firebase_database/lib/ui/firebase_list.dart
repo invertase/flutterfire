@@ -4,21 +4,23 @@
 
 import 'dart:collection';
 
-import '../firebase_database.dart'
-    show DatabaseError, DataSnapshot, Event, Query;
+import 'package:firebase_core/firebase_core.dart';
+
+import '../firebase_database.dart' show DataSnapshot, DatabaseEvent, Query;
 import 'utils/stream_subscriber_mixin.dart';
 
 typedef ChildCallback = void Function(int index, DataSnapshot snapshot);
 typedef ChildMovedCallback = void Function(
-    int fromIndex, int toIndex, DataSnapshot snapshot);
+  int fromIndex,
+  int toIndex,
+  DataSnapshot snapshot,
+);
 typedef ValueCallback = void Function(DataSnapshot snapshot);
-typedef ErrorCallback = void Function(DatabaseError error);
+typedef ErrorCallback = void Function(FirebaseException error);
 
 /// Sorts the results of `query` on the client side using `DataSnapshot.key`.
 class FirebaseList extends ListBase<DataSnapshot>
-    with
-        // ignore: prefer_mixin
-        StreamSubscriberMixin<Event> {
+    with StreamSubscriberMixin<DatabaseEvent> {
   FirebaseList({
     required this.query,
     this.onChildAdded,
@@ -99,49 +101,48 @@ class FirebaseList extends ListBase<DataSnapshot>
       }
     }
 
-    throw FallThroughError();
+    throw UnsupportedError('Key not found: $key');
   }
 
-  void _onChildAdded(Event event) {
+  void _onChildAdded(DatabaseEvent event) {
     int index = 0;
-    if (event.previousSiblingKey != null) {
-      index = _indexForKey(event.previousSiblingKey!) + 1;
+    if (event.previousChildKey != null) {
+      index = _indexForKey(event.previousChildKey!) + 1;
     }
     _snapshots.insert(index, event.snapshot);
     onChildAdded!(index, event.snapshot);
   }
 
-  void _onChildRemoved(Event event) {
+  void _onChildRemoved(DatabaseEvent event) {
     final index = _indexForKey(event.snapshot.key!);
     _snapshots.removeAt(index);
     onChildRemoved!(index, event.snapshot);
   }
 
-  void _onChildChanged(Event event) {
+  void _onChildChanged(DatabaseEvent event) {
     final index = _indexForKey(event.snapshot.key!);
     _snapshots[index] = event.snapshot;
     onChildChanged!(index, event.snapshot);
   }
 
-  void _onChildMoved(Event event) {
+  void _onChildMoved(DatabaseEvent event) {
     final fromIndex = _indexForKey(event.snapshot.key!);
     _snapshots.removeAt(fromIndex);
 
     int toIndex = 0;
-    if (event.previousSiblingKey != null) {
-      final prevIndex = _indexForKey(event.previousSiblingKey!);
+    if (event.previousChildKey != null) {
+      final prevIndex = _indexForKey(event.previousChildKey!);
       toIndex = prevIndex + 1;
     }
     _snapshots.insert(toIndex, event.snapshot);
     onChildMoved!(fromIndex, toIndex, event.snapshot);
   }
 
-  void _onValue(Event event) {
+  void _onValue(DatabaseEvent event) {
     onValue!(event.snapshot);
   }
 
   void _onError(Object o) {
-    final DatabaseError error = o as DatabaseError;
-    onError?.call(error);
+    onError?.call(o as FirebaseException);
   }
 }

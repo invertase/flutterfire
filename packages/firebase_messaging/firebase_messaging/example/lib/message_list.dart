@@ -1,4 +1,8 @@
-// @dart=2.9
+// Copyright 2022, the Chromium project authors.  Please see the AUTHORS file
+// for details. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
+
+// ignore_for_file: require_trailing_commas
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -37,8 +41,10 @@ class _MessageList extends State<MessageList> {
           RemoteMessage message = _messages[index];
 
           return ListTile(
-            title: Text(message.messageId),
-            subtitle: Text(message.sentTime?.toString() ?? 'N/A'),
+            title: Text(
+                message.messageId ?? 'no RemoteMessage.messageId available'),
+            subtitle:
+                Text(message.sentTime?.toString() ?? DateTime.now().toString()),
             onTap: () => Navigator.pushNamed(context, '/message',
                 arguments: MessageArguments(message, false)),
           );

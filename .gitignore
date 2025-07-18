@@ -10,13 +10,14 @@
 .pub/
 .dart_tool/
 pubspec.lock
+pubspec_overrides.yaml
 flutter_export_environment.sh
 
 examples/all_plugins/pubspec.yaml
 
+Package.resolved
 Podfile.lock
 Pods/
-Podfile
 .symlinks/
 **/Flutter/ephemeral/
 **/Flutter/Flutter.podspec
@@ -40,15 +41,18 @@ GeneratedPluginRegistrant.m
 GeneratedPluginRegistrant.java
 GeneratedPluginRegistrant.swift
 generated_plugin_registrant.dart
+generated_plugin_registrant.h
+generated_plugin_registrant.cc
+generated_plugins.cmake
 
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+.cxx/
 
 .project
 .classpath
 .settings
-/pubspec.yaml
 .last_build_id
 
 # Docs
@@ -75,4 +79,7 @@ yarn-error.log*
 
 firebase-debug.log
 firestore-debug.log
+database-debug.log
 ui-debug.log
+**/.build/**/*
+.github/workflows/spam-removal/package-lock.json

@@ -1,25 +1,22 @@
 group 'io.flutter.plugins.firebase.database'
 version '1.0-SNAPSHOT'
 
+apply plugin: 'com.android.library'
+apply from: file("local-config.gradle")
+
 buildscript {
     repositories {
         google()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.4'
+        mavenCentral()
     }
 }
 
 rootProject.allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
-
-apply plugin: 'com.android.library'
 
 def firebaseCoreProject = findProject(':firebase_core')
 if (firebaseCoreProject == null) {
@@ -35,46 +32,38 @@ def getRootProjectExtOrCoreProperty(name, firebaseCoreProject) {
 }
 
 android {
-    compileSdkVersion 29
+    // Conditional for compatibility with AGP <4.2.
+    if (project.android.hasProperty("namespace")) {
+        namespace 'io.flutter.plugins.firebase.database'
+    }
+
+    compileSdkVersion project.ext.compileSdk
 
     defaultConfig {
-        minSdkVersion 16
+        minSdkVersion project.ext.minSdk
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    compileOptions {
+        sourceCompatibility project.ext.javaVersion
+        targetCompatibility project.ext.javaVersion
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     lintOptions {
         disable 'InvalidPackage'
     }
+
     dependencies {
         api firebaseCoreProject
         implementation platform("com.google.firebase:firebase-bom:${getRootProjectExtOrCoreProperty("FirebaseSDKVersion", firebaseCoreProject)}")
         implementation 'com.google.firebase:firebase-database'
-        implementation 'androidx.annotation:annotation:1.1.0'
+        implementation 'androidx.annotation:annotation:1.7.0'
     }
 }
 
 apply from: file("./user-agent.gradle")
 
-afterEvaluate {
-    def containsEmbeddingDependencies = false
-    for (def configuration : configurations.all) {
-        for (def dependency : configuration.dependencies) {
-            if (dependency.group == 'io.flutter' &&
-                dependency.name.startsWith('flutter_embedding') &&
-                dependency.isTransitive())
-            {
-                containsEmbeddingDependencies = true
-                break
-            }
-        }
-    }
-    if (!containsEmbeddingDependencies) {
-        android {
-            dependencies {
-                def lifecycle_version = "1.1.1"
-                compileOnly "android.arch.lifecycle:runtime:$lifecycle_version"
-                compileOnly "android.arch.lifecycle:common:$lifecycle_version"
-                compileOnly "android.arch.lifecycle:common-java8:$lifecycle_version"
-            }
-        }
-    }
-}

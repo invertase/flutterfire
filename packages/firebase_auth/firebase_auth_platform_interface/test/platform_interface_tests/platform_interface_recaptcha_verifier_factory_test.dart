@@ -1,3 +1,4 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
@@ -42,7 +43,7 @@ void main() {
       }
     });
 
-    group('verifyExtends()', () {
+    group('verify()', () {
       test('calls successfully', () {
         try {
           RecaptchaVerifierFactoryPlatform.verifyExtends(
@@ -67,7 +68,9 @@ void main() {
     group('delegateFor()', () {
       test('throws UnimplementedError error', () async {
         try {
-          recaptchaVerifierFactoryPlatform.delegateFor();
+          recaptchaVerifierFactoryPlatform.delegateFor(
+            auth: FirebaseAuthPlatform.instance,
+          );
         } on UnimplementedError catch (e) {
           expect(e.message, equals('delegateFor() is not implemented'));
           return;

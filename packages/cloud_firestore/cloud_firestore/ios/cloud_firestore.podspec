@@ -24,20 +24,19 @@ Pod::Spec.new do |s|
   s.license          = { :file => '../LICENSE' }
   s.authors          = 'The Chromium Authors'
   s.source           = { :path => '.' }
-  
-  s.source_files     = 'Classes/**/*.{h,m}'
-  s.public_header_files = 'Classes/Public/*.h'
-  s.private_header_files = 'Classes/Private/*.h'
+  s.source_files     = 'cloud_firestore/Sources/cloud_firestore/**/*.{h,m}'
+  s.public_header_files = 'cloud_firestore/Sources/cloud_firestore/include/Public/**/*.h'
+  s.private_header_files = 'cloud_firestore/Sources/cloud_firestore/include/Private/**/*.h'
 
-  s.ios.deployment_target = '10.0'
+  s.ios.deployment_target = '13.0'
   s.dependency 'Flutter'
 
   s.dependency 'firebase_core'
   s.dependency 'Firebase/Firestore', firebase_sdk_version
-  
+
   s.static_framework = true
   s.pod_target_xcconfig = {
-    'GCC_PREPROCESSOR_DEFINITIONS' => "LIBRARY_VERSION=\\@\\\"#{library_version}\\\" LIBRARY_NAME=\\@\\\"flutter-fire-fst\\\"",
+    'GCC_PREPROCESSOR_DEFINITIONS' => "LIBRARY_VERSION=\\\"#{library_version}\\\" LIBRARY_NAME=\\\"flutter-fire-fst\\\"",
     'DEFINES_MODULE' => 'YES'
   }
 end

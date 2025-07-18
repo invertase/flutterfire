@@ -1,24 +1,10 @@
+// ignore_for_file: require_trailing_commas
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
-
-/// An enumeration of document change types.
-enum DocumentChangeType {
-  /// Indicates a new document was added to the set of documents matching the
-  /// query.
-  added,
-
-  /// Indicates a document within the query was modified.
-  modified,
-
-  /// Indicates a document within the query was removed (either deleted or no
-  /// longer matches the query.
-  removed,
-}
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 /// A change to the documents matching a query.
 ///
@@ -41,8 +27,8 @@ class DocumentChangePlatform extends PlatformInterface {
   /// This is used by the app-facing [DocumentChange] to ensure that
   /// the object in which it's going to delegate calls has been
   /// constructed properly.
-  static void verifyExtends(DocumentChangePlatform instance) {
-    PlatformInterface.verifyToken(instance, _token);
+  static void verify(DocumentChangePlatform instance) {
+    PlatformInterface.verify(instance, _token);
   }
 
   /// The type of change that occurred (added, modified, or removed).
